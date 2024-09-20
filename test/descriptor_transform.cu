@@ -17,7 +17,6 @@
  */
 
 #include "common.cuh"
-#include "common.hpp"
 #include "impl/cpu/descriptor_transform.hpp"
 #include "impl/cuda/cutil.cuh"
 #include "impl/cuda/descriptor_transform.cuh"
@@ -40,11 +39,16 @@ int main(void) {
 
     const cv::Size randsize(randint(256, 1028), randint(128, 512));
 
-    std::cout << "descriptor transform on " << randsize << " " << STR(INPUT_TYPE) << " "
+    std::cout << "limited descriptor transform on " << randsize << " " << STR(INPUT_TYPE) << " "
               << STR(DESCRIPTOR_TYPE) << std::endl;
 
     int max_bits = sizeof(DESCRIPTOR_TYPE) * 8;
+
+#if TRANSFORM_LIMITED
     size_t n = (max_bits + 7) / 4;
+#else
+    size_t n = size_t((2 + std::sqrt(4 - 4 * ( 3 - max_bits ))) / 2.0);
+#endif
 
     for (size_t i = 0; i < n; ++i) {
         cv::Mat_<INPUT_TYPE> randmat(randsize);
@@ -64,19 +68,39 @@ int main(void) {
     const dim3 block(1024);
     const dim3 grid = create_grid(block, randsize);
 
-    cuda::descriptor_transform_kernel<INPUT_TYPE, DESCRIPTOR_TYPE>
+#if TRANSFORM_LIMITED
+
+    cuda::transform_limited_kernel<INPUT_TYPE, DESCRIPTOR_TYPE>
         <<<grid, block>>>(rand_devptr, n, randsize, gpuout_devptr);
+
+#else
+
+    cuda::transform_full_kernel<INPUT_TYPE, DESCRIPTOR_TYPE>
+        <<<grid, block>>>(rand_devptr, n, randsize, gpuout_devptr);
+
+#endif
 
     assertCudaSuccess(cudaGetLastError());
 
     cv::merge(rand_host, hoststack);
 
-    auto cpuout = cpu::descriptor_transform<INPUT_TYPE, DESCRIPTOR_TYPE>(
+#if TRANSFORM_LIMITED
+
+    auto cpuout = cpu::descriptor_transform<INPUT_TYPE, DESCRIPTOR_TYPE, cpu::transform_limited>(
         hoststack,
         randsize,
-        n,
-        TransformMode::LIMITED
+        n
     );
+
+#else
+
+    auto cpuout = cpu::descriptor_transform<INPUT_TYPE, DESCRIPTOR_TYPE, cpu::transform_full>(
+        hoststack,
+        randsize,
+        n
+    );
+
+#endif
 
     assertCudaSuccess(cudaDeviceSynchronize());
 

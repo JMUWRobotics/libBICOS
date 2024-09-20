@@ -30,16 +30,47 @@
 
 namespace BICOS::impl::cpu {
 
+template <typename TInput, typename TDescriptor>
+static void match_impl(
+    const cv::Mat& stack0,
+    const cv::Mat& stack1,
+    double thresh,
+    std::optional<float> step,
+    TransformMode mode,
+    cv::Size sz,
+    size_t n,
+    cv::Mat_<disparity_t>& out
+) {
+    cv::Mat1s raw_disp;
+    switch (mode) {
+        case TransformMode::FULL: {
+            auto desc0 = descriptor_transform<TInput, TDescriptor, transform_full>(stack0, sz, n),
+                 desc1 = descriptor_transform<TInput, TDescriptor, transform_full>(stack1, sz, n);
+            raw_disp = bicos(desc0, desc1, sz);
+        } break;
+        case TransformMode::LIMITED: {
+            auto desc0 = descriptor_transform<TInput, TDescriptor, transform_limited>(stack0, sz, n),
+                 desc1 = descriptor_transform<TInput, TDescriptor, transform_limited>(stack1, sz, n);
+            raw_disp = bicos(desc0, desc1, sz);
+        } break;
+    }
+
+    if (step.has_value())
+        agree_subpixel<TInput>(raw_disp, stack0, stack1, n, thresh, step.value(), out);
+    else
+        agree<TInput>(raw_disp, stack0, stack1, n, thresh, out);
+}
+
 void match(
     const std::vector<cv::Mat>& _stack0,
     const std::vector<cv::Mat>& _stack1,
     cv::Mat_<disparity_t>& disparity,
     Config cfg
 ) {
-    const size_t n_images = _stack0.size();
+    const size_t n = _stack0.size();
     const int depth = _stack0.front().depth();
 
-    if (n_images < 2)
+    if (n < 2)
         throw std::invalid_argument("need at least two images");
 
     if (depth != CV_8UC1 && depth != CV_16UC1)
@@ -49,60 +80,38 @@ void match(
     cv::merge(_stack0, stack0);
     cv::merge(_stack1, stack1);
 
-    int required_bits = cfg.mode == TransformMode::FULL
-        ? throw std::invalid_argument("unimplemented")
-        : 4 * n_images - 7;
+    // clang-format off
 
-    const cv::Size img_size = _stack0.front().size();
+    int required_bits = cfg.mode == TransformMode::FULL
+        ? n * n - 2 * n + 3
+        : 4 * n - 7;
+
+    const cv::Size size = _stack0.front().size();
 
     cv::Mat1s raw_disp;
-
-#define TRANSFORM_COMPUTE(matdepth, descdepth) \
-    do { \
-        auto desc0 = \
-                 descriptor_transform<matdepth, descdepth>(stack0, img_size, n_images, cfg.mode), \
-             desc1 = \
-                 descriptor_transform<matdepth, descdepth>(stack1, img_size, n_images, cfg.mode); \
-        raw_disp = bicos(desc0, desc1, img_size); \
-    } while (0)
 
     switch (required_bits) {
         case 0 ... 32:
             if (depth == CV_8U)
-                TRANSFORM_COMPUTE(uint8_t, uint32_t);
+                match_impl<uint8_t, uint32_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.mode, size, n, disparity);
             else
-                TRANSFORM_COMPUTE(uint16_t, uint32_t);
+                match_impl<uint16_t, uint32_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.mode, size, n, disparity);
             break;
         case 33 ... 64:
             if (depth == CV_8U)
-                TRANSFORM_COMPUTE(uint8_t, uint64_t);
+                match_impl<uint8_t, uint64_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.mode, size, n, disparity);
             else
-                TRANSFORM_COMPUTE(uint16_t, uint64_t);
+                match_impl<uint16_t, uint64_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.mode, size, n, disparity);
             break;
         case 65 ... 128:
             if (depth == CV_8U)
-                TRANSFORM_COMPUTE(uint8_t, uint128_t);
+                match_impl<uint8_t, uint128_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.mode, size, n, disparity);
             else
-                TRANSFORM_COMPUTE(uint16_t, uint128_t);
+                match_impl<uint16_t, uint128_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.mode, size, n, disparity);
             break;
         default:
-            throw std::invalid_argument(
-                std::format("input stacks too large, would require {} bits", required_bits)
-            );
+            throw std::invalid_argument(std::format("input stacks too large, would require {} bits", required_bits));
     }
-
-    // clang-format off
-
-    if (cfg.subpixel_step.has_value())
-        if (depth == CV_8UC1)
-            agree_subpixel<uint8_t>(raw_disp, stack0, stack1, n_images, cfg.nxcorr_thresh, cfg.subpixel_step.value(), disparity);
-        else
-            agree_subpixel<uint16_t>(raw_disp, stack0, stack1, n_images, cfg.nxcorr_thresh, cfg.subpixel_step.value(), disparity);
-    else
-        if (depth == CV_8UC1)
-            agree<uint8_t>(raw_disp, stack0, stack1, n_images, cfg.nxcorr_thresh, disparity);
-        else
-            agree<uint16_t>(raw_disp, stack0, stack1, n_images, cfg.nxcorr_thresh, disparity);
 
     // clang-format on
 }

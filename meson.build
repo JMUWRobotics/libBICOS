@@ -76,16 +76,23 @@ if impl == 'cuda'
     foreach input_depth : [8, 16]
         foreach descriptor_depth : [32, 64, 128]
             testname = f'descriptor_transform_@input_depth@_@descriptor_depth@'
-            test(testname,
-                executable('test_' + testname,
-                    sources: srcs + 'test/descriptor_transform.cu',
-                    dependencies: deps,
-                    include_directories: incls,
-                    cuda_args: ['-DBICOS_CUDA', f'-DINPUT_TYPE=uint@input_depth@_t', f'-DDESCRIPTOR_TYPE=uint@descriptor_depth@_t'],
-                    cpp_args: '-DBICOS_CPU',
-                    override_options: ['cpp_std=c++20', 'cuda_std=c++20'],
+            foreach limited : [0, 1]
+                if limited == 0
+                    testname = 'full_' + testname
+                else
+                    testname = 'limited_' + testname
+                endif
+                test(testname,
+                    executable('test_' + testname,
+                        sources: srcs + 'test/descriptor_transform.cu',
+                        dependencies: deps,
+                        include_directories: incls,
+                        cuda_args: ['-DBICOS_CUDA', f'-DINPUT_TYPE=uint@input_depth@_t', f'-DDESCRIPTOR_TYPE=uint@descriptor_depth@_t', f'-DTRANSFORM_LIMITED=@limited@'],
+                        cpp_args: '-DBICOS_CPU',
+                        override_options: ['cpp_std=c++20', 'cuda_std=c++20'],
+                    )
                 )
-            )
+            endforeach
         endforeach
         foreach agree_cfg : [0, 1]
             if agree_cfg == 1

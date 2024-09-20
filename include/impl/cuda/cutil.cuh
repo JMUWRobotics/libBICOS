@@ -22,7 +22,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/core/cuda/common.hpp>
 
-#include "common.hpp"
+#define PIX_STACKSIZE 33
 
 namespace BICOS::impl::cuda {
 

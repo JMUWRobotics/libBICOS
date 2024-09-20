@@ -39,6 +39,7 @@ static void match_impl(
     cv::Size sz,
     double nxcorr_threshold,
     Precision precision,
+    TransformMode mode,
     std::optional<float> subpixel_step,
     cv::cuda::GpuMat& out,
     cv::cuda::Stream& _stream
@@ -70,12 +71,12 @@ static void match_impl(
     RegisteredPtr ptrs_dev(ptrs_host.data(), 2 * n_images, true);
     RegisteredPtr descr0_dev(&descr0), descr1_dev(&descr1);
 
-    descriptor_transform_kernel<TInput, TDescriptor>
+    transform_limited_kernel<TInput, TDescriptor>
         <<<grid, block, 0, substream0>>>(ptrs_dev, n_images, sz, descr0_dev);
     assertCudaSuccess(cudaGetLastError());
     assertCudaSuccess(cudaEventRecord(event0, substream0));
 
-    descriptor_transform_kernel<TInput, TDescriptor>
+    transform_limited_kernel<TInput, TDescriptor>
         <<<grid, block, 0, substream1>>>(ptrs_dev + n_images, n_images, sz, descr1_dev);
     assertCudaSuccess(cudaGetLastError());
     assertCudaSuccess(cudaEventRecord(event1, substream1));
@@ -148,96 +149,40 @@ void match(
     Config cfg,
     cv::cuda::Stream& stream
 ) {
-    const size_t n_images = _stack0.size();
+    const size_t n = _stack0.size();
     const int depth = _stack0.front().depth();
     const cv::Size sz = _stack0.front().size();
 
+    // clang-format off
+
     int required_bits = cfg.mode == TransformMode::FULL
-        ? throw std::invalid_argument("unimplemented")
-        : 4 * n_images - 7;
+        ? n * n - 2 * n + 3
+        : 4 * n - 7;
 
     switch (required_bits) {
         case 0 ... 32:
             if (depth == CV_8U)
-                match_impl<uint8_t, uint32_t>(
-                    _stack0,
-                    _stack1,
-                    n_images,
-                    sz,
-                    cfg.nxcorr_thresh,
-                    cfg.precision,
-                    cfg.subpixel_step,
-                    disparity,
-                    stream
-                );
+                match_impl<uint8_t, uint32_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, disparity, stream);
             else
-                match_impl<uint16_t, uint32_t>(
-                    _stack0,
-                    _stack1,
-                    n_images,
-                    sz,
-                    cfg.nxcorr_thresh,
-                    cfg.precision,
-                    cfg.subpixel_step,
-                    disparity,
-                    stream
-                );
+                match_impl<uint16_t, uint32_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, disparity, stream);
             break;
         case 33 ... 64:
             if (depth == CV_8U)
-                match_impl<uint8_t, uint64_t>(
-                    _stack0,
-                    _stack1,
-                    n_images,
-                    sz,
-                    cfg.nxcorr_thresh,
-                    cfg.precision,
-                    cfg.subpixel_step,
-                    disparity,
-                    stream
-                );
+                match_impl<uint8_t, uint64_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, disparity, stream);
             else
-                match_impl<uint16_t, uint64_t>(
-                    _stack0,
-                    _stack1,
-                    n_images,
-                    sz,
-                    cfg.nxcorr_thresh,
-                    cfg.precision,
-                    cfg.subpixel_step,
-                    disparity,
-                    stream
-                );
+                match_impl<uint16_t, uint64_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, disparity, stream);
             break;
         case 65 ... 128:
             if (depth == CV_8U)
-                match_impl<uint8_t, uint128_t>(
-                    _stack0,
-                    _stack1,
-                    n_images,
-                    sz,
-                    cfg.nxcorr_thresh,
-                    cfg.precision,
-                    cfg.subpixel_step,
-                    disparity,
-                    stream
-                );
+                match_impl<uint8_t, uint128_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, disparity, stream);
             else
-                match_impl<uint16_t, uint128_t>(
-                    _stack0,
-                    _stack1,
-                    n_images,
-                    sz,
-                    cfg.nxcorr_thresh,
-                    cfg.precision,
-                    cfg.subpixel_step,
-                    disparity,
-                    stream
-                );
+                match_impl<uint16_t, uint128_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, disparity, stream);
             break;
         default:
             throw std::invalid_argument("input stacks too large, exceeding 128 bits");
     }
+
+    // clang-format on
 }
 
 } // namespace BICOS::impl::cuda

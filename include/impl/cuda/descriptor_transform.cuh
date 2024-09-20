@@ -19,12 +19,79 @@
 #pragma once
 
 #include "bitfield.hpp"
+#include "impl/common.hpp"
 #include "stepbuf.hpp"
 
 namespace BICOS::impl::cuda {
 
 template<typename TInput, typename TDescriptor>
-__global__ void descriptor_transform_kernel(
+__global__ void transform_full_kernel(
+    const cv::cuda::PtrStepSz<TInput>* stacks,
+    size_t _n,
+    cv::Size size,
+    StepBuf<TDescriptor>* out
+) {
+    const int col = blockIdx.x * blockDim.x + threadIdx.x;
+    const int row = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (size.width <= col || size.height <= row)
+        return;
+
+    TInput pix[PIX_STACKSIZE];
+    Bitfield<TDescriptor> bf;
+    ssize_t n = (ssize_t)_n;
+
+    float av = 0.0f;
+    for (ssize_t i = 0; i < n; ++i) {
+        av += pix[i] = stacks[i](row, col);
+#ifdef BICOS_DEBUG
+        if (i >= sizeof(pix))
+            __trap();
+#endif
+    }
+    av /= n;
+
+    wider_t<TInput> pairsums[PIX_STACKSIZE];
+
+    // clang-format off
+
+    for (ssize_t t = 0; t < n - 2; ++t) {
+        const TInput a = pix[t + 0],
+                     b = pix[t + 1],
+                     c = pix[t + 2];
+        
+        bf.set(a < b);
+        bf.set(a < c);
+        bf.set(a < av);
+
+        pairsums[t] = wider_t<TInput>(pix[t]) + wider_t<TInput>(pix[t + 1]);
+    }
+
+    pairsums[n - 2] = wider_t<TInput>(pix[n - 2]) + wider_t<TInput>(pix[n - 1]);
+
+    const TInput a = pix[n - 2],
+                 b = pix[n - 1];
+
+    bf.set(a < b);
+    bf.set(a < av);
+    bf.set(b < av);
+
+    for (ssize_t t = 0; t < n - 1; ++t) {
+        for (ssize_t i = 0; i < n - 1; ++i) {
+            if (i == t || i == t - 1 || i == t + 1)
+                continue;
+
+            bf.set(pairsums[t] < pairsums[i]);
+        }
+    }
+
+    // clang-format on
+
+    out->row(row)[col] = bf.v;
+}
+
+template<typename TInput, typename TDescriptor>
+__global__ void transform_limited_kernel(
     const cv::cuda::PtrStepSz<TInput>* stacks,
     size_t n,
     cv::Size size,
@@ -36,10 +103,10 @@ __global__ void descriptor_transform_kernel(
     if (size.width <= col || size.height <= row)
         return;
 
-    TInput pix[33];
+    TInput pix[PIX_STACKSIZE];
     Bitfield<TDescriptor> bf;
 
-    double av = 0.0f;
+    float av = 0.0f;
     for (size_t i = 0; i < n; ++i) {
         av += pix[i] = stacks[i](row, col);
 #ifdef BICOS_DEBUG

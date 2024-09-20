@@ -16,6 +16,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "common.hpp"
 #include <cxxopts.hpp>
 #include <filesystem>
 #include <iostream>
@@ -47,7 +48,7 @@ int main(int argc, char const* const* argv) {
         ("folder1", "Optional second folder with input images. If specified, file names need to be 0.png, 1.png... Else, folder0 needs to contain 0_left.png, 0_right.png, 1_left.png...", cxxopts::value<std::string>())
         ("t,threshold", "Normalized cross corellation threshold", cxxopts::value<double>()->default_value("0.5"))
         ("s,step", "Subpixel step (optional)", cxxopts::value<float>())
-        ("m,mode", "Tranformation mode {'FULL', 'LIMITED'} (unused)", cxxopts::value<std::string>()->default_value("LIMITED"))
+        ("limited", "Limit transformation mode. Allows for more images to be used.")
         ("o,outfile", "Output file for disparity image", cxxopts::value<std::string>()->default_value("bicosdisp.png"))
 #ifdef BICOS_CUDA
         ("single", "Set single instead of double precision")
@@ -88,10 +89,13 @@ int main(int argc, char const* const* argv) {
 
     BICOS::Config c {
         .nxcorr_thresh = args["threshold"].as<double>(),
+        .mode = TransformMode::FULL
     };
 
     if (args.count("step"))
         c.subpixel_step = args["step"].as<float>();
+    if (args.count("limited"))
+        c.mode = TransformMode::LIMITED;
 #ifdef BICOS_CUDA
     if (args.count("single"))
         c.precision = Precision::SINGLE;

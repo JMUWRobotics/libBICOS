@@ -70,9 +70,9 @@ int main(int argc, char const* const* argv) {
     cudaEvent_t ldescev, rdescev;
     cudaEventCreate(&ldescev);
     cudaEventCreate(&rdescev);
-    impl::cuda::descriptor_transform_kernel<uint8_t, uint128_t>
+    impl::cuda::transform_limited_kernel<uint8_t, uint128_t>
         <<<grid, block, 0, lstream>>>(dptr, n, sz, ldptr);
-    impl::cuda::descriptor_transform_kernel<uint8_t, uint128_t>
+    impl::cuda::transform_limited_kernel<uint8_t, uint128_t>
         <<<grid, block, 0, rstream>>>(dptr + n, n, sz, rdptr);
 
     assertCudaSuccess(cudaGetLastError());
@@ -104,17 +104,15 @@ int main(int argc, char const* const* argv) {
     cv::merge(lhost, lhin);
     cv::merge(rhost, rhin);
 
-    auto ldhost = impl::cpu::descriptor_transform<uint8_t, uint128_t>(
+    auto ldhost = impl::cpu::descriptor_transform<uint8_t, uint128_t, impl::cpu::transform_limited>(
              lhin,
              sz,
-             n,
-             TransformMode::LIMITED
+             n
          ),
-         rdhost = impl::cpu::descriptor_transform<uint8_t, uint128_t>(
+         rdhost = impl::cpu::descriptor_transform<uint8_t, uint128_t, impl::cpu::transform_limited>(
              rhin,
              sz,
-             n,
-             TransformMode::LIMITED
+             n
          );
 
     raw_host = impl::cpu::bicos(ldhost, rdhost, sz);

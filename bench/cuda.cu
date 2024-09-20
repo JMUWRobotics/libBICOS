@@ -37,17 +37,16 @@ using namespace impl;
 
 constexpr int seed = 0x600DF00D;
 
-constexpr int n = 5;
 constexpr double thresh = 0.9;
 constexpr float step = 0.25;
 static const cv::Size size(3300, 2200);
 
-template <typename TPrecision, cuda::corrfun<uint8_t, TPrecision> FCorr>
+template<typename TPrecision, cuda::corrfun<uint8_t, TPrecision> FCorr>
 __global__ void nxcorr_kernel(const uint8_t* a, const uint8_t* b, size_t n, TPrecision* out) {
     *out = FCorr(a, b, n);
 }
 
-template <typename TPrecision, cuda::corrfun<uint8_t, TPrecision> FCorr>
+template<typename TPrecision, cuda::corrfun<uint8_t, TPrecision> FCorr>
 void bench_nxcorr_subroutine(benchmark::State& state) {
     uint8_t _a[50], _b[50], *a, *b;
 
@@ -62,11 +61,11 @@ void bench_nxcorr_subroutine(benchmark::State& state) {
     cudaMemcpy(a, _a, sizeof(_a), cudaMemcpyHostToDevice);
     cudaMemcpy(b, _b, sizeof(_b), cudaMemcpyHostToDevice);
 
-    TPrecision *out;
+    TPrecision* out;
     cudaMalloc(&out, 1);
 
-    for (auto _ : state) {
-        nxcorr_kernel<TPrecision, FCorr><<<1,1>>>(a, b, sizeof(_a), out);
+    for (auto _: state) {
+        nxcorr_kernel<TPrecision, FCorr><<<1, 1>>>(a, b, sizeof(_a), out);
         cudaDeviceSynchronize();
     }
 }
@@ -74,6 +73,7 @@ void bench_nxcorr_subroutine(benchmark::State& state) {
 template<typename TInput>
 void bench_agree_kernel(benchmark::State& state) {
     cv::setRNGSeed(seed);
+    const int n = 10;
 
     cv::Mat_<int16_t> randdisp(size);
     cv::randu(randdisp, -1, size.width);
@@ -100,7 +100,8 @@ void bench_agree_kernel(benchmark::State& state) {
     const dim3 grid = create_grid(block, size);
 
     for (auto _: state) {
-        cuda::agree_kernel<TInput, double, cuda::nxcorrd><<<grid, block>>>(randdisp_dev, devptr, n, thresh, out);
+        cuda::agree_kernel<TInput, double, cuda::nxcorrd>
+            <<<grid, block>>>(randdisp_dev, devptr, n, thresh, out);
         cudaDeviceSynchronize();
     }
 
@@ -110,6 +111,7 @@ void bench_agree_kernel(benchmark::State& state) {
 template<typename TInput>
 void bench_agree_subpixel_kernel(benchmark::State& state) {
     cv::setRNGSeed(seed);
+    const int n = 10;
 
     cv::Mat_<int16_t> randdisp(size);
     cv::randu(randdisp, -1, size.width);
@@ -147,6 +149,7 @@ void bench_agree_subpixel_kernel(benchmark::State& state) {
 template<typename TInput>
 void bench_agree_subpixel_kernel_smem(benchmark::State& state) {
     cv::setRNGSeed(seed);
+    const int n = 10;
 
     cv::Mat_<int16_t> randdisp(size);
     cv::randu(randdisp, -1, size.width);
@@ -233,9 +236,12 @@ void bench_bicos_kernel(benchmark::State& state) {
     assertCudaSuccess(cudaGetLastError());
 }
 
-template<typename TInput, typename TDescriptor>
+template<typename TInput, typename TDescriptor, TransformMode mode>
 void bench_descriptor_transform_kernel(benchmark::State& state) {
     cv::setRNGSeed(seed);
+
+    int bits = sizeof(TDescriptor) * 8;
+    int n = mode == TransformMode::FULL ? int((2 + std::sqrt(4 - 4 * ( 3 - bits ))) / 2.0) : (bits + 7) / 4;
 
     std::vector<cv::cuda::GpuMat> _devinput;
     std::vector<cv::cuda::PtrStepSz<TInput>> devinput;
@@ -258,10 +264,14 @@ void bench_descriptor_transform_kernel(benchmark::State& state) {
     const dim3 block(1024);
     const dim3 grid = create_grid(block, size);
 
-    for (auto _: state) {
-        cuda::descriptor_transform_kernel<TInput, TDescriptor>
-            <<<grid, block>>>(inptr, n, size, outptr);
-    }
+    if (mode == TransformMode::FULL)
+        for (auto _: state)
+            cuda::transform_full_kernel<TInput, TDescriptor>
+                <<<grid, block>>>(inptr, n, size, outptr);
+    else
+        for (auto _: state)
+            cuda::transform_limited_kernel<TInput, TDescriptor>
+                <<<grid, block>>>(inptr, n, size, outptr);
 
     assertCudaSuccess(cudaGetLastError());
 }
@@ -294,8 +304,12 @@ void bench_integration(benchmark::State& state) {
     }
 }
 
-BENCHMARK(bench_nxcorr_subroutine<float, cuda::nxcorrf>)->Repetitions(10)->ReportAggregatesOnly(true);
-BENCHMARK(bench_nxcorr_subroutine<double, cuda::nxcorrd>)->Repetitions(10)->ReportAggregatesOnly(true);
+BENCHMARK(bench_nxcorr_subroutine<float, cuda::nxcorrf>)
+    ->Repetitions(10)
+    ->ReportAggregatesOnly(true);
+BENCHMARK(bench_nxcorr_subroutine<double, cuda::nxcorrd>)
+    ->Repetitions(10)
+    ->ReportAggregatesOnly(true);
 
 BENCHMARK(bench_agree_kernel<uint8_t>);
 BENCHMARK(bench_agree_kernel<uint16_t>);
@@ -306,12 +320,20 @@ BENCHMARK(bench_agree_subpixel_kernel_smem<uint16_t>);
 BENCHMARK(bench_bicos_kernel<uint32_t>);
 BENCHMARK(bench_bicos_kernel<uint64_t>);
 BENCHMARK(bench_bicos_kernel<uint128_t>);
-BENCHMARK(bench_descriptor_transform_kernel<uint8_t, uint32_t>);
-BENCHMARK(bench_descriptor_transform_kernel<uint16_t, uint32_t>);
-BENCHMARK(bench_descriptor_transform_kernel<uint8_t, uint64_t>);
-BENCHMARK(bench_descriptor_transform_kernel<uint16_t, uint64_t>);
-BENCHMARK(bench_descriptor_transform_kernel<uint8_t, uint128_t>);
-BENCHMARK(bench_descriptor_transform_kernel<uint16_t, uint128_t>);
+
+BENCHMARK(bench_descriptor_transform_kernel<uint8_t, uint32_t, TransformMode::LIMITED>);
+BENCHMARK(bench_descriptor_transform_kernel<uint16_t, uint32_t, TransformMode::LIMITED>);
+BENCHMARK(bench_descriptor_transform_kernel<uint8_t, uint64_t, TransformMode::LIMITED>);
+BENCHMARK(bench_descriptor_transform_kernel<uint16_t, uint64_t, TransformMode::LIMITED>);
+BENCHMARK(bench_descriptor_transform_kernel<uint8_t, uint128_t, TransformMode::LIMITED>);
+BENCHMARK(bench_descriptor_transform_kernel<uint16_t, uint128_t, TransformMode::LIMITED>);
+
+BENCHMARK(bench_descriptor_transform_kernel<uint8_t, uint32_t, TransformMode::FULL>);
+BENCHMARK(bench_descriptor_transform_kernel<uint16_t, uint32_t, TransformMode::FULL>);
+BENCHMARK(bench_descriptor_transform_kernel<uint8_t, uint64_t, TransformMode::FULL>);
+BENCHMARK(bench_descriptor_transform_kernel<uint16_t, uint64_t, TransformMode::FULL>);
+BENCHMARK(bench_descriptor_transform_kernel<uint8_t, uint128_t, TransformMode::FULL>);
+BENCHMARK(bench_descriptor_transform_kernel<uint16_t, uint128_t, TransformMode::FULL>);
 
 BENCHMARK(bench_integration)
     ->ArgsProduct({

@@ -19,6 +19,7 @@
 #pragma once
 
 #include "common.hpp"
+#include "cutil.cuh"
 
 #include <opencv2/core/cuda/common.hpp>
 
@@ -101,7 +102,7 @@ __global__ void agree_kernel(
     if (col1 < 0 || out.cols <= col1)
         return;
 
-    TInput pix0[33], pix1[33];
+    TInput pix0[PIX_STACKSIZE], pix1[PIX_STACKSIZE];
 
     const cv::cuda::PtrStepSz<TInput>
         *stack0 = stacks,
@@ -149,7 +150,7 @@ __global__ void agree_subpixel_kernel(
     if (col1 < 0 || out.cols <= col1)
         return;
 
-    TInput pix0[33], pix1[33];
+    TInput pix0[PIX_STACKSIZE], pix1[PIX_STACKSIZE];
 
     const cv::cuda::PtrStepSz<TInput>
         *stack0 = stacks,
@@ -159,7 +160,7 @@ __global__ void agree_subpixel_kernel(
         pix0[t] = stack0[t](row, col);
         pix1[t] = stack1[t](row, col1);
 #ifdef BICOS_DEBUG
-        if (t >= 33)
+        if (t >= PIX_STACKSIZE)
             __trap();
 #endif
     }
@@ -172,8 +173,8 @@ __global__ void agree_subpixel_kernel(
 
         out(row, col) = d;
     } else {
-        TInput interp[33];
-        float a[33], b[33], c[33];
+        TInput interp[PIX_STACKSIZE];
+        float a[PIX_STACKSIZE], b[PIX_STACKSIZE], c[PIX_STACKSIZE];
 
         // clang-format off
 
@@ -251,11 +252,11 @@ __global__ void agree_subpixel_kernel_smem(
     if (col1 < 0 || out.cols <= col1)
         return;
 
-    TInput pix0[33];
+    TInput pix0[PIX_STACKSIZE];
     for (size_t t = 0; t < n; ++t) {
         pix0[t] = stack0[t](row, col);
 #ifdef BICOS_DEBUG
-        if (t >= 33)
+        if (t >= PIX_STACKSIZE)
             __trap();
 #endif
     }
@@ -268,8 +269,8 @@ __global__ void agree_subpixel_kernel_smem(
 
         out(row, col) = d;
     } else {
-        TInput interp[33];
-        float a[33], b[33], c[33];
+        TInput interp[PIX_STACKSIZE];
+        float a[PIX_STACKSIZE], b[PIX_STACKSIZE], c[PIX_STACKSIZE];
 
         // clang-format off
 
