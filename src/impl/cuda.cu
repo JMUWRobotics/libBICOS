@@ -87,7 +87,7 @@ static void match_impl(
     /* bicos disparity */
 
     cv::cuda::GpuMat bicos_disp(sz, cv::DataType<int16_t>::type);
-    bicos_disp.setTo(INVALID_DISP_<int16_t>);
+    bicos_disp.setTo(INVALID_DISP_<int16_t>, _stream);
 
     size_t smem_size = sz.width * sizeof(TDescriptor);
 
