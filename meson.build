@@ -15,7 +15,7 @@
 ##  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ##
 
-project('libBICOS', 'cpp', version: '1.0.0', license: 'LGPL-3.0-or-later')
+project('libBICOS', 'cpp', version: '1.0.1', license: 'LGPL-3.0-or-later')
 
 pkg = import('pkgconfig')
 
@@ -180,10 +180,12 @@ else
     message('library google/benchmark not found, skipping benchmark build')
 endif
 
+project_version = meson.project_version()
+
 configure_file(
     output: 'config.hpp',
     configuration: {
-        'BICOS_VERSION': meson.project_version(),
+        'BICOS_VERSION': f'"@project_version@"',
         'BICOS_CPU': impl == 'cpu',
         'BICOS_CUDA': impl == 'cuda',
     },
@@ -194,7 +196,7 @@ install_headers('include/common.hpp', 'include/match.hpp', subdir: 'BICOS')
 if pkg.found()
     pkg.generate(libs,
         name: 'libBICOS',
-        version: meson.project_version(),
+        version: project_version,
         description: 'GPU-accelerated library for binary correspondence search on multishot stereo imagery',
         requires: 'opencv4',
         url: 'https://github.com/JMUWRobotics/libBICOS',
