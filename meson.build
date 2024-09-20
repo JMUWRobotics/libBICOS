@@ -53,7 +53,7 @@ libs = both_libraries(
     override_options: ['cpp_std=c++20'],
 )
 
-cxxopts = dependency('cxxopts')
+cxxopts = dependency('cxxopts', required: false, not_found_message: 'library cxxopts not found, skipping CLI build')
 if cxxopts.found()
     executable(
         'bicos-cli',
@@ -64,8 +64,6 @@ if cxxopts.found()
         install: true,
         override_options: ['cpp_std=c++20'],
     )
-else
-    message('library cxxopts not found, skipping CLI build')
 endif
 
 if impl == 'cuda'
@@ -175,7 +173,7 @@ if impl == 'cuda'
     endif
 endif
 
-googlebench = dependency('benchmark')
+googlebench = dependency('benchmark', required: false, not_found_message: 'library google/benchmark not found, skipping benchmark build')
 if googlebench.found()
     sourceroot = meson.project_source_root()
     deps += googlebench
@@ -190,8 +188,6 @@ if googlebench.found()
             )
         )
     endif
-else
-    message('library google/benchmark not found, skipping benchmark build')
 endif
 
 project_version = meson.project_version()
