@@ -159,6 +159,13 @@ if impl == 'cuda'
         args: [datdir],
         timeout: 150
     )
+
+    if impl == 'cuda'
+        test('regress_cuda',
+            find_program('test/regress.bash'),
+            workdir: meson.current_source_dir()
+        )
+    endif
 endif
 
 googlebench = dependency('benchmark')
