@@ -17,12 +17,14 @@
  */
 
 #include "common.hpp"
+#include <chrono>
 #include <cxxopts.hpp>
 #include <filesystem>
 #include <iostream>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <optional>
+#include <ratio>
 
 #ifdef BICOS_CUDA
     #include <opencv2/core/cuda.hpp>
@@ -108,15 +110,27 @@ int main(int argc, char const* const* argv) {
 
     cv::cuda::GpuMat disp_gpu;
 
+    auto tick = std::chrono::high_resolution_clock::now();
+
     BICOS::match(lstack_gpu, rstack_gpu, disp_gpu, c);
+
+    auto tock = std::chrono::high_resolution_clock::now();
 
     disp_gpu.download(disp);
 
 #else
 
+    auto tick = std::chrono::high_resolution_clock::now();
+
     BICOS::match(lstack, rstack, disp, c);
 
+    auto tock = std::chrono::high_resolution_clock::now();
+
 #endif
+
+    double delta_ms = std::chrono::duration_cast<std::chrono::microseconds>(tock - tick).count() / 1000.0;
+
+    std::cout << "Latency:\t" << delta_ms << "ms" << std::endl; 
 
     save_disparity(disp, args["outfile"].as<std::string>());
 

@@ -59,7 +59,7 @@ if cxxopts.found()
         'bicos-cli',
         sources: ['src/cli.cpp', 'src/fileutils.cpp'],
         include_directories: incls,
-        dependencies: deps + dependency('cxxopts'),
+        dependencies: deps + cxxopts,
         link_with: libs,
         install: true,
         override_options: ['cpp_std=c++20'],
