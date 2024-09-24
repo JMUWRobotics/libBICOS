@@ -147,7 +147,7 @@ if impl == 'cuda'
                 cpp_args: '-DBICOS_CPU',
                 override_options: ['cpp_std=c++20', 'cuda_std=c++20'],
             ),
-            args: [datdir],
+            args: [datdir / 'left', datdir / 'right'],
             timeout: -1
         )
     endif
@@ -161,7 +161,7 @@ if impl == 'cuda'
             cpp_args: '-DBICOS_CPU',
             override_options: ['cpp_std=c++20', 'cuda_std=c++20'],
         ),
-        args: [datdir],
+        args: [datdir / 'left', datdir / 'right'],
         timeout: 150
     )
 

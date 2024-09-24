@@ -44,10 +44,11 @@ int main(void) {
     cv::cuda::GpuMat disp_dev(randsize, cv::DataType<int16_t>::type);
     disp_dev.setTo(INVALID_DISP_<int16_t>);
 
-    dim3 block(1024);
+    size_t smem_size = randsize.width * sizeof(DESCRIPTOR_TYPE);
+
+    dim3 block = cuda::max_blocksize(cuda::bicos_kernel<DESCRIPTOR_TYPE>, smem_size);
     dim3 grid = create_grid(block, randsize);
 
-    size_t smem_size = randsize.width * sizeof(DESCRIPTOR_TYPE);
     cuda::bicos_kernel<DESCRIPTOR_TYPE><<<grid, block, smem_size>>>(lptr, rptr, disp_dev);
 
     assertCudaSuccess(cudaGetLastError());

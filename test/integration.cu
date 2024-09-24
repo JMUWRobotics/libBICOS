@@ -34,7 +34,7 @@ int main(int argc, char const* const* argv) {
     std::vector<cv::Mat> lhost, rhost;
     std::vector<cv::cuda::GpuMat> ldev, rdev;
 
-    read_sequence(argv[1], std::nullopt, lseq, rseq, true);
+    read_sequence(argv[1], argv[2], lseq, rseq, true);
     sort_sequence_to_stack(lseq, rseq, lhost, rhost);
     matvec_to_gpu(lhost, rhost, ldev, rdev);
 

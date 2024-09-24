@@ -42,6 +42,13 @@ namespace BICOS::impl::cuda {
         cv::cuda::device::divUp(size.height, block.y) \
     )
 
+template<class T> 
+inline dim3 max_blocksize(T fun, size_t smem_size = 0) {
+    int _minGridSize, blockSize;
+    assertCudaSuccess(cudaOccupancyMaxPotentialBlockSize(&_minGridSize, &blockSize, fun, smem_size));
+    return dim3(blockSize);
+}
+
 template<typename T>
 class RegisteredPtr {
 private:

@@ -53,8 +53,7 @@ int main(void) {
     cv::cuda::GpuMat randdisp_dev;
     randdisp_dev.upload(randdisp);
 
-    const dim3 block(512);
-    const dim3 grid = create_grid(block, randsize);
+    dim3 block, grid;
 
     double thresh = randreal(-0.9, 0.9);
 
@@ -68,6 +67,9 @@ int main(void) {
 
     float step = 0.25f;
 
+    block = cuda::max_blocksize(cuda::agree_subpixel_kernel<INPUT_TYPE, double, cuda::nxcorrd>);
+    grid = create_grid(block, randsize);
+
     cuda::agree_subpixel_kernel<INPUT_TYPE, double, cuda::nxcorrd>
         <<<grid, block>>>(randdisp_dev, devptr, n, thresh, step, devout_gmem);
     assertCudaSuccess(cudaGetLastError());
@@ -77,6 +79,9 @@ int main(void) {
         cudaFuncAttributeMaxDynamicSharedMemorySize,
         smem_size
     ));
+
+    block = cuda::max_blocksize(cuda::agree_subpixel_kernel_smem<INPUT_TYPE, double, cuda::nxcorrd>, smem_size);
+    grid = create_grid(block, randsize);
 
     cuda::agree_subpixel_kernel_smem<INPUT_TYPE, double, cuda::nxcorrd>
         <<<grid, block, smem_size>>>(randdisp_dev, devptr, n, thresh, step, devout_smem);

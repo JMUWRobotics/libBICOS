@@ -25,6 +25,7 @@
 #include <opencv2/imgproc.hpp>
 #include <optional>
 #include <ratio>
+#include <stdexcept>
 
 #ifdef BICOS_CUDA
     #include <opencv2/core/cuda.hpp>
@@ -52,6 +53,7 @@ int main(int argc, char const* const* argv) {
         ("s,step", "Subpixel step (optional)", cxxopts::value<float>())
         ("limited", "Limit transformation mode. Allows for more images to be used.")
         ("o,outfile", "Output file for disparity image", cxxopts::value<std::string>()->default_value("bicosdisp.png"))
+        ("n,stacksize", "Number of images to process. Defaults to all.", cxxopts::value<uint>())
 #ifdef BICOS_CUDA
         ("single", "Set single instead of double precision")
 #endif
@@ -84,7 +86,19 @@ int main(int argc, char const* const* argv) {
         read_sequence(folder0, folder1, lseq, rseq, true);
         sort_sequence_to_stack(lseq, rseq, lstack, rstack);
 
-        std::cout << "loaded " << lseq.size() + rseq.size() << " images\n";
+        if (args.count("stacksize")) {
+            uint n = args["stacksize"].as<uint>();
+
+            if (n < lstack.size()) {
+                lstack.resize(n);
+                rstack.resize(n);
+            }
+        }
+
+        if (lstack.size() != rstack.size())
+            throw std::invalid_argument(std::format("Left stack: {}, right stack: {} images", lstack.size(), rstack.size()));
+
+        std::cout << "loaded " << lstack.size() + rstack.size() << " images total\n";
     }
 
     cv::Mat_<BICOS::disparity_t> disp;

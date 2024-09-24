@@ -53,9 +53,6 @@ static void match_impl(
 
     StepBuf<TDescriptor> descr0(sz), descr1(sz);
 
-    dim3 block(1024);
-    dim3 grid = create_grid(block, sz);
-
     cudaStream_t mainstream = cv::cuda::StreamAccessor::getStream(_stream);
 
     /* descriptor transform */
@@ -71,13 +68,32 @@ static void match_impl(
     RegisteredPtr ptrs_dev(ptrs_host.data(), 2 * n_images, true);
     RegisteredPtr descr0_dev(&descr0), descr1_dev(&descr1);
 
-    transform_limited_kernel<TInput, TDescriptor>
-        <<<grid, block, 0, substream0>>>(ptrs_dev, n_images, sz, descr0_dev);
+    dim3 block, grid;
+
+    if (mode == TransformMode::LIMITED) {
+        block = max_blocksize(transform_limited_kernel<TInput, TDescriptor>);
+        grid = create_grid(block, sz);
+
+        transform_limited_kernel<TInput, TDescriptor>
+            <<<grid, block, 0, substream0>>>(ptrs_dev, n_images, sz, descr0_dev);
+    } else {
+        block = max_blocksize(transform_full_kernel<TInput, TDescriptor>);
+        grid = create_grid(block, sz);
+
+        transform_full_kernel<TInput, TDescriptor>
+            <<<grid, block, 0, substream0>>>(ptrs_dev, n_images, sz, descr0_dev);
+    }
+
     assertCudaSuccess(cudaGetLastError());
     assertCudaSuccess(cudaEventRecord(event0, substream0));
 
-    transform_limited_kernel<TInput, TDescriptor>
-        <<<grid, block, 0, substream1>>>(ptrs_dev + n_images, n_images, sz, descr1_dev);
+    if (mode == TransformMode::LIMITED)
+        transform_limited_kernel<TInput, TDescriptor>
+            <<<grid, block, 0, substream1>>>(ptrs_dev + n_images, n_images, sz, descr1_dev);
+    else
+        transform_full_kernel<TInput, TDescriptor>
+            <<<grid, block, 0, substream1>>>(ptrs_dev + n_images, n_images, sz, descr1_dev);
+
     assertCudaSuccess(cudaGetLastError());
     assertCudaSuccess(cudaEventRecord(event1, substream1));
 
@@ -96,6 +112,10 @@ static void match_impl(
         cudaFuncAttributeMaxDynamicSharedMemorySize,
         smem_size
     ));
+
+    block = max_blocksize(bicos_kernel<TDescriptor>, smem_size);
+    grid  = create_grid(block, sz);
+
     bicos_kernel<TDescriptor>
         <<<grid, block, smem_size, mainstream>>>(descr0_dev, descr1_dev, bicos_disp);
     assertCudaSuccess(cudaGetLastError());
@@ -105,36 +125,37 @@ static void match_impl(
     out.create(sz, cv::DataType<disparity_t>::type);
     out.setTo(INVALID_DISP, _stream);
 
-#ifdef BICOS_DEBUG
-    block = dim3(512);
-#else
-    block = dim3(768);
-#endif
-    grid = create_grid(block, sz);
-
     // clang-format off
 
     switch (precision) {
         case Precision::SINGLE:
-            if (subpixel_step.has_value())
+            if (subpixel_step.has_value()) {
+                block = max_blocksize(agree_subpixel_kernel<TInput, float, nxcorrf>);
+                grid = create_grid(block, sz);
                 agree_subpixel_kernel<TInput, float, nxcorrf>
                     <<<grid, block, 0, mainstream>>>(
                         bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), out);
-            else
+            } else {
+                block = max_blocksize(agree_kernel<TInput, float, nxcorrf>);
+                grid = create_grid(block, sz);
                 agree_kernel<TInput, float, nxcorrf>
                     <<<grid, block, 0, mainstream>>>(
                         bicos_disp, ptrs_dev, n_images, nxcorr_threshold, out);
-            break;
+            } break;
         case Precision::DOUBLE:
-            if (subpixel_step.has_value())
+            if (subpixel_step.has_value()) {
+                block = max_blocksize(agree_subpixel_kernel<TInput, double, nxcorrd>);
+                grid = create_grid(block, sz);
                 agree_subpixel_kernel<TInput, double, nxcorrd>
                     <<<grid, block, 0, mainstream>>>(
                         bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), out);
-            else
+            } else {
+                block = max_blocksize(agree_kernel<TInput, double, nxcorrd>);
+                grid = create_grid(block, sz);
                 agree_kernel<TInput, double, nxcorrd>
                     <<<grid, block, 0, mainstream>>>(
                         bicos_disp, ptrs_dev, n_images, nxcorr_threshold, out);
-            break;
+            } break;
     }
 
     // clang-format on

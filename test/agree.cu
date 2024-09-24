@@ -42,6 +42,8 @@ int main(void) {
     std::vector<cv::cuda::PtrStepSz<INPUT_TYPE>> devinput;
     cv::Mat hinput_l, hinput_r;
 
+    dim3 grid, block;
+
     for (int i = 0; i < 2 * n; ++i) {
         if (i == n) {
             cv::merge(_hostinput, hinput_l);
@@ -72,9 +74,6 @@ int main(void) {
     cv::cuda::GpuMat randdisp_dev;
     randdisp_dev.upload(randdisp);
 
-    const dim3 block(512);
-    const dim3 grid = create_grid(block, randsize);
-
     double thresh = randreal(-0.9, 0.9);
 
     cv::cuda::GpuMat devout(randsize, cv::DataType<disparity_t>::type);
@@ -82,6 +81,9 @@ int main(void) {
     cv::Mat_<disparity_t> hostout(randsize), devout_host;
 
 #if TEST_SUBPIXEL
+
+    block = cuda::max_blocksize(cuda::agree_subpixel_kernel<INPUT_TYPE, double, cuda::nxcorrd>);
+    grid = create_grid(block, randsize);
 
     float step = 0.25f;
 
@@ -108,6 +110,9 @@ int main(void) {
     return 0;
 
 #else
+
+    block = cuda::max_blocksize(cuda::agree_kernel<INPUT_TYPE, double, cuda::nxcorrd>);
+    grid = create_grid(block, randsize);
 
     cuda::agree_kernel<INPUT_TYPE, double, cuda::nxcorrd><<<grid, block>>>(randdisp_dev, devptr, n, thresh, devout);
 

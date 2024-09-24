@@ -96,7 +96,7 @@ void bench_agree_kernel(benchmark::State& state) {
 
     cv::cuda::GpuMat out(size, cv::DataType<disparity_t>::type);
 
-    const dim3 block(1024);
+    const dim3 block = cuda::max_blocksize(cuda::agree_kernel<TInput, double, cuda::nxcorrd>);
     const dim3 grid = create_grid(block, size);
 
     for (auto _: state) {
@@ -134,7 +134,7 @@ void bench_agree_subpixel_kernel(benchmark::State& state) {
 
     cv::cuda::GpuMat out(size, cv::DataType<disparity_t>::type);
 
-    const dim3 block(1024);
+    const dim3 block = cuda::max_blocksize(cuda::agree_subpixel_kernel<TInput, double, cuda::nxcorrd>);
     const dim3 grid = create_grid(block, size);
 
     for (auto _: state) {
@@ -172,9 +172,6 @@ void bench_agree_subpixel_kernel_smem(benchmark::State& state) {
 
     cv::cuda::GpuMat out(size, cv::DataType<disparity_t>::type);
 
-    const dim3 block(1024);
-    const dim3 grid = create_grid(block, size);
-
     size_t smem_size = size.width * n * sizeof(TInput);
 
     assertCudaSuccess(cudaFuncSetAttribute(
@@ -182,6 +179,9 @@ void bench_agree_subpixel_kernel_smem(benchmark::State& state) {
         cudaFuncAttributeMaxDynamicSharedMemorySize,
         smem_size
     ));
+
+    const dim3 block = cuda::max_blocksize(cuda::agree_subpixel_kernel_smem<TInput, double, cuda::nxcorrd>, smem_size);
+    const dim3 grid = create_grid(block, size);
 
     for (auto _: state) {
         cuda::agree_subpixel_kernel_smem<TInput, double, cuda::nxcorrd>
@@ -217,9 +217,6 @@ void bench_bicos_kernel(benchmark::State& state) {
 
     cv::cuda::GpuMat out(size, cv::DataType<int16_t>::type);
 
-    const dim3 block(1024);
-    const dim3 grid = create_grid(block, size);
-
     size_t smem_size = size.width * sizeof(TDescriptor);
 
     assertCudaSuccess(cudaFuncSetAttribute(
@@ -227,6 +224,9 @@ void bench_bicos_kernel(benchmark::State& state) {
         cudaFuncAttributeMaxDynamicSharedMemorySize,
         smem_size
     ));
+
+    const dim3 block = cuda::max_blocksize(cuda::bicos_kernel<TDescriptor>, smem_size);
+    const dim3 grid = create_grid(block, size);
 
     for (auto _: state) {
         cuda::bicos_kernel<TDescriptor><<<grid, block, smem_size>>>(lptr, rptr, out);
@@ -261,10 +261,10 @@ void bench_descriptor_transform_kernel(benchmark::State& state) {
     cuda::StepBuf<TDescriptor> out(size);
     cuda::RegisteredPtr outptr(&out);
 
-    const dim3 block(1024);
-    const dim3 grid = create_grid(block, size);
+    const dim3 block = cuda::max_blocksize(mode == TransformMode::FULL ? cuda::transform_full_kernel<TInput, TDescriptor> : cuda::transform_limited_kernel<TInput, TDescriptor>);
+    const dim3 grid  = create_grid(block, size);
 
-    if (mode == TransformMode::FULL)
+    if constexpr (mode == TransformMode::FULL)
         for (auto _: state)
             cuda::transform_full_kernel<TInput, TDescriptor>
                 <<<grid, block>>>(inptr, n, size, outptr);
@@ -281,7 +281,7 @@ void bench_integration(benchmark::State& state) {
     std::vector<cv::Mat> lhost, rhost;
     std::vector<cv::cuda::GpuMat> ldev, rdev;
 
-    read_sequence(SOURCE_ROOT "/data", std::nullopt, lseq, rseq, true);
+    read_sequence(SOURCE_ROOT "/data/left", SOURCE_ROOT "/data/right", lseq, rseq, true);
     sort_sequence_to_stack(lseq, rseq, lhost, rhost);
     matvec_to_gpu(lhost, rhost, ldev, rdev);
 

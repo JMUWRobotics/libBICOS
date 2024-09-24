@@ -65,15 +65,20 @@ int main(void) {
     cuda::StepBuf<DESCRIPTOR_TYPE> gpuout(randsize);
     cuda::RegisteredPtr gpuout_devptr(&gpuout);
 
-    const dim3 block(1024);
-    const dim3 grid = create_grid(block, randsize);
+    dim3 grid, block;
 
 #if TRANSFORM_LIMITED
+
+    block = cuda::max_blocksize(cuda::transform_limited_kernel<INPUT_TYPE, DESCRIPTOR_TYPE>);
+    grid = create_grid(block, randsize);
 
     cuda::transform_limited_kernel<INPUT_TYPE, DESCRIPTOR_TYPE>
         <<<grid, block>>>(rand_devptr, n, randsize, gpuout_devptr);
 
 #else
+
+    block = cuda::max_blocksize(cuda::transform_limited_kernel<INPUT_TYPE, DESCRIPTOR_TYPE>);
+    grid = create_grid(block, randsize);
 
     cuda::transform_full_kernel<INPUT_TYPE, DESCRIPTOR_TYPE>
         <<<grid, block>>>(rand_devptr, n, randsize, gpuout_devptr);
