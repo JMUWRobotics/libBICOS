@@ -8,6 +8,7 @@ Dependencies:
 
 - [`meson`](https://github.com/mesonbuild/meson) (build)
 - `opencv 4.x`
+- `cuda 12.x` including toolkit 
 - [`cxxopts`](https://github.com/jarro2783/cxxopts) (optional, for cli)
 - [`benchmark`](https://github.com/google/benchmark) (optional, for executing benchmarks)
 
