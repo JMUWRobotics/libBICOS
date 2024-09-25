@@ -15,7 +15,7 @@
 ##  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ##
 
-project('libBICOS', 'cpp', version: '1.0.1-devel', license: 'LGPL-3.0-or-later')
+project('libBICOS', 'cpp', version: '1.1.0', license: 'LGPL-3.0-or-later')
 
 pkg = import('pkgconfig')
 
@@ -53,7 +53,7 @@ libs = both_libraries(
     override_options: ['cpp_std=c++20'],
 )
 
-cxxopts = dependency('cxxopts', required: false, not_found_message: 'library cxxopts not found, skipping CLI build')
+cxxopts = dependency('cxxopts', required: false, not_found_message: 'library cxxopts not found, skipping CLI build', )
 if cxxopts.found()
     executable(
         'bicos-cli',
