@@ -54,7 +54,7 @@ int main(int argc, char const* const* argv) {
         ("limited", "Limit transformation mode. Allows for more images to be used.")
         ("o,outfile", "Output file for disparity image", cxxopts::value<std::string>()->default_value("bicosdisp.png"))
         ("n,stacksize", "Number of images to process. Defaults to all.", cxxopts::value<uint>())
-        ("Q,qmatrix", "Path to cv::FileStorage with single matrix \"Q\" for computing pointcloud", cxxopts::value<std::string>())
+        ("q,qmatrix", "Path to cv::FileStorage with single matrix \"Q\" for computing pointcloud", cxxopts::value<std::string>())
 #ifdef BICOS_CUDA
         ("single", "Set single instead of double precision")
 #endif

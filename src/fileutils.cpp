@@ -43,7 +43,14 @@ void save_pointcloud(const cv::Mat3f points, const cv::Mat_<BICOS::disparity_t>&
 
             cv::Vec3f point = points(row, col);
 
-            xyz << point[0] << ' ' << point[1] << ' ' << point[2] << '\n';
+            float x = point[0],
+                  y = point[1], 
+                  z = point[2];
+
+            if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z) || z < 0.0f)
+                continue;
+
+            xyz << x << ' ' << y << ' ' << z << '\n';
         }
     }
 

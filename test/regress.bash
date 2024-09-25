@@ -18,5 +18,5 @@
 
 set -xeu
 
-builddir/bicos-cli data/left data/right -t 0.9 -s 0.1 -o /tmp/bicos-regress
+builddir/bicos-cli data/left data/right -t 0.9 -s 0.1 -n 12 -o /tmp/bicos-regress
 diff test/regress_cuda.tiff /tmp/bicos-regress.tiff
