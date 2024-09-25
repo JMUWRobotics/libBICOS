@@ -178,14 +178,17 @@ if googlebench.found()
     sourceroot = meson.project_source_root()
     deps += googlebench
     if impl == 'cuda'
+        available_gpus = run_command('nvidia-smi', '--query-gpu=gpu_name', '--format=csv,noheader', check: true).stdout().strip()
+
         benchmark('cuda',
             executable('bench_cuda',
                 sources: srcs + 'bench/cuda.cu',
                 dependencies: deps,
                 include_directories: incls,
                 cuda_args: f'-DSOURCE_ROOT="@sourceroot@"',
-                override_options: ['cpp_std=c++20', 'cuda_std=c++20'],
-            )
+                override_options: ['cpp_std=c++20', 'cuda_std=c++20']
+            ),
+            args: [f'--benchmark_context=available_gpus=@available_gpus@']
         )
     endif
 endif
