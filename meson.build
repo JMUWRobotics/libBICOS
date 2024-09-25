@@ -53,7 +53,7 @@ libs = both_libraries(
     override_options: ['cpp_std=c++20'],
 )
 
-cxxopts = dependency('cxxopts', required: false, not_found_message: 'library cxxopts not found, skipping CLI build', )
+cxxopts = dependency('cxxopts', required: false, not_found_message: 'library cxxopts not found, skipping CLI build')
 if cxxopts.found()
     executable(
         'bicos-cli',
