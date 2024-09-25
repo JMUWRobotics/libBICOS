@@ -27,6 +27,8 @@ $ meson configure -Dimplementation=cpu builddir
 $ meson install -C builddir
 ```
 
+The versioning scheme of the library is [Semantic Versioning](https://semver.org/)
+
 ## Benchmarking:
 
 ```console
