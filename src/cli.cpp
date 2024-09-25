@@ -23,8 +23,8 @@
 #include <iostream>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/calib3d.hpp>
 #include <optional>
-#include <ratio>
 #include <stdexcept>
 
 #ifdef BICOS_CUDA
@@ -54,6 +54,7 @@ int main(int argc, char const* const* argv) {
         ("limited", "Limit transformation mode. Allows for more images to be used.")
         ("o,outfile", "Output file for disparity image", cxxopts::value<std::string>()->default_value("bicosdisp.png"))
         ("n,stacksize", "Number of images to process. Defaults to all.", cxxopts::value<uint>())
+        ("Q,qmatrix", "Path to cv::FileStorage with single matrix \"Q\" for computing pointcloud", cxxopts::value<std::string>())
 #ifdef BICOS_CUDA
         ("single", "Set single instead of double precision")
 #endif
@@ -74,7 +75,16 @@ int main(int argc, char const* const* argv) {
     std::cout << LICENSE_HEADER << std::endl;
 
     std::filesystem::path folder0 = args["folder0"].as<std::string>();
+    std::filesystem::path outfile = args["outfile"].as<std::string>();
     std::optional<std::filesystem::path> folder1 = std::nullopt;
+    std::optional<std::filesystem::path> q_store = std::nullopt;
+
+    if (args.count("qmatrix")) {
+        q_store = args["qmatrix"].as<std::string>();
+
+        if (!std::filesystem::exists(q_store.value()))
+            throw std::invalid_argument(std::format("'{}' does not exist", q_store.value().string()));
+    }
 
     if (args.count("folder1"))
         folder1 = args["folder1"].as<std::string>();
@@ -146,7 +156,21 @@ int main(int argc, char const* const* argv) {
 
     std::cout << "Latency:\t" << delta_ms << "ms" << std::endl; 
 
-    save_disparity(disp, args["outfile"].as<std::string>());
+    save_disparity(disp, outfile);
+
+    if (q_store.has_value()) {
+        cv::Mat Q;
+        cv::Mat3f points;
+        cv::FileStorage fs(q_store.value(), cv::FileStorage::READ);
+
+        fs["Q"] >> Q;
+
+        fs.release();
+
+        cv::reprojectImageTo3D(disp, points, Q, false, CV_32F);
+
+        save_pointcloud(points, disp, outfile);
+    }
 
     return 0;
 }

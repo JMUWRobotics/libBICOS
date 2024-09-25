@@ -17,15 +17,41 @@
  */
 
 #include "fileutils.hpp"
+#include "common.hpp"
 
 #include <filesystem>
 #include <format>
 #include <iostream>
+#include <ostream>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <stdexcept>
+#include <fstream>
 
 namespace BICOS {
+
+void save_pointcloud(const cv::Mat3f points, const cv::Mat_<BICOS::disparity_t>& disparity, std::filesystem::path outfile) {
+    if (points.size() != disparity.size())
+        throw std::invalid_argument("save_pointcloud: invalid sizes");
+
+    std::ofstream xyz(outfile.replace_extension("xyz"));
+
+    for (int row = 0; row < points.rows; ++row) {
+        for (int col = 0; col < points.cols; ++col) {
+            if (std::isnan(disparity(row, col)) || disparity(row, col) == BICOS::INVALID_DISP)
+                continue;
+
+            cv::Vec3f point = points(row, col);
+
+            xyz << point[0] << ' ' << point[1] << ' ' << point[2] << '\n';
+        }
+    }
+
+    xyz.flush();
+    xyz.close();
+
+    std::cout << "Saved pointcloud in ascii-format to\t" << outfile << std::endl;
+}
 
 void save_disparity(const cv::Mat_<BICOS::disparity_t>& disparity, std::filesystem::path outfile) {
     cv::Mat normalized, colorized;

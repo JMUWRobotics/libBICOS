@@ -35,6 +35,8 @@ struct SequenceEntry {
     }
 };
 
+void save_pointcloud(const cv::Mat3f points, const cv::Mat_<BICOS::disparity_t>& disparity, std::filesystem::path outfile);
+
 void save_disparity(const cv::Mat_<BICOS::disparity_t>& disparity, std::filesystem::path outfile);
 
 void read_sequence(
