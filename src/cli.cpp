@@ -34,6 +34,8 @@
 #include "fileutils.hpp"
 #include "match.hpp"
 
+#define DELTA_MS(name) double delta_##name = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - tick).count() / 1000.0
+
 using namespace BICOS;
 
 #define LICENSE_HEADER "libBICOS  Copyright (C) 2024  Robotics Group @ JMU\n"\
@@ -108,7 +110,7 @@ int main(int argc, char const* const* argv) {
         if (lstack.size() != rstack.size())
             throw std::invalid_argument(std::format("Left stack: {}, right stack: {} images", lstack.size(), rstack.size()));
 
-        std::cout << "loaded " << lstack.size() + rstack.size() << " images total\n";
+        std::cout << "Loaded " << lstack.size() + rstack.size() << " images total\n";
     }
 
     cv::Mat_<BICOS::disparity_t> disp;
@@ -130,17 +132,34 @@ int main(int argc, char const* const* argv) {
 #ifdef BICOS_CUDA
 
     std::vector<cv::cuda::GpuMat> lstack_gpu, rstack_gpu;
-    matvec_to_gpu(lstack, rstack, lstack_gpu, rstack_gpu);
-
-    cv::cuda::GpuMat disp_gpu;
 
     auto tick = std::chrono::high_resolution_clock::now();
 
+    matvec_to_gpu(lstack, rstack, lstack_gpu, rstack_gpu);
+
+    DELTA_MS(upload);
+
+    std::cout << "Latency:\t" << delta_upload << "ms (upload)\t";
+    std::cout.flush();
+
+    cv::cuda::GpuMat disp_gpu;
+
+    tick = std::chrono::high_resolution_clock::now();
+
     BICOS::match(lstack_gpu, rstack_gpu, disp_gpu, c);
 
-    auto tock = std::chrono::high_resolution_clock::now();
+    DELTA_MS(match);
+
+    std::cout << delta_match << "ms (match)\t";
+    std::cout.flush();
+
+    tick = std::chrono::high_resolution_clock::now();
 
     disp_gpu.download(disp);
+
+    DELTA_MS(download);
+
+    std::cout << delta_download << "ms (download)" << std::endl;
 
 #else
 
@@ -148,13 +167,11 @@ int main(int argc, char const* const* argv) {
 
     BICOS::match(lstack, rstack, disp, c);
 
-    auto tock = std::chrono::high_resolution_clock::now();
+    DELTA_MS(match);
+
+    std::cout << "Latency:\t" << delta_match << "ms" << std::endl;
 
 #endif
-
-    double delta_ms = std::chrono::duration_cast<std::chrono::microseconds>(tock - tick).count() / 1000.0;
-
-    std::cout << "Latency:\t" << delta_ms << "ms" << std::endl; 
 
     save_disparity(disp, outfile);
 
