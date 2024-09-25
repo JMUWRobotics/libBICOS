@@ -17,7 +17,7 @@ $ git clone https://github.com/JMUWRobotics/libBICOS
 $ cd libBICOS
 
 # optional but recommended, pick a release depending on your needs
-$ git checkout v1.0.0
+$ git checkout v1.1.0
 
 $ meson setup builddir --buildtype release
 
@@ -27,7 +27,7 @@ $ meson configure -Dimplementation=cpu builddir
 $ meson install -C builddir
 ```
 
-The versioning scheme of the library is [Semantic Versioning](https://semver.org/)
+The versioning scheme of the library is [Semantic Versioning](https://semver.org/).
 
 ## Benchmarking:
 
