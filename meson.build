@@ -15,7 +15,7 @@
 ##  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ##
 
-project('libBICOS', 'cpp', version: '1.1.0', license: 'LGPL-3.0-or-later')
+project('libBICOS', 'cpp', version: '1.1.0-devel', license: 'LGPL-3.0-or-later')
 
 pkg = import('pkgconfig')
 
