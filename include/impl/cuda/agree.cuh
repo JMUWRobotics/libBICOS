@@ -22,6 +22,7 @@
 #include "cutil.cuh"
 
 #include <opencv2/core/cuda/common.hpp>
+#include <cuda_bf16.h>
 
 namespace BICOS::impl::cuda {
 
@@ -76,6 +77,27 @@ __device__ __forceinline__ float nxcorrf(const T* pix0, const T* pix1, size_t n)
     // return copysignf(n_expectancy * n_expectancy / (sqdiffsum0 * sqdiffsum1), n_expectancy);
 
     return n_expectancy * rsqrtf(sqdiffsum0 * sqdiffsum1);
+}
+
+template<typename T>
+__device__ __forceinline__ __nv_bfloat16 nxcorrbf(const T* pix0, const T* pix1, size_t n) {
+    __nv_bfloat162 mean(CUDART_ZERO_BF16, CUDART_ZERO_BF16);
+    for (size_t i = 0; i < n; ++i)
+        mean = __hadd2_rn(mean, __nv_bfloat162(pix0[i], pix1[i]));
+
+    mean /= __nv_bfloat162(n, n);
+
+    __nv_bfloat162 sqdiffsum(CUDART_ZERO_BF16, CUDART_ZERO_BF16);
+    __nv_bfloat16  n_expectancy = CUDART_ZERO_BF16;
+
+    for (size_t i = 0; i < n; ++i) {
+        __nv_bfloat162 diff = __nv_bfloat162(pix0[i], pix1[i]) - mean;
+
+        n_expectancy = __hfma(diff.x, diff.y, n_expectancy);
+        sqdiffsum = __hfma2(diff, diff, sqdiffsum);
+    }
+
+    return n_expectancy * hrsqrt(sqdiffsum.x * sqdiffsum.y);
 }
 
 template<typename TInput, typename TPrecision, corrfun<TInput, TPrecision> FCorr>

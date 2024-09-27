@@ -310,6 +310,9 @@ BENCHMARK(bench_nxcorr_subroutine<float, cuda::nxcorrf>)
 BENCHMARK(bench_nxcorr_subroutine<double, cuda::nxcorrd>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
+BENCHMARK(bench_nxcorr_subroutine<__nv_bfloat16, cuda::nxcorrbf>)
+    ->Repetitions(10)
+    ->ReportAggregatesOnly(true);
 
 BENCHMARK(bench_agree_kernel<uint8_t>);
 BENCHMARK(bench_agree_kernel<uint16_t>);
