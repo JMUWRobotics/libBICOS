@@ -54,6 +54,7 @@ enum class Precision { SINGLE, DOUBLE };
 struct Config {
     double nxcorr_thresh = 0.5;
     std::optional<float> subpixel_step = std::nullopt;
+    std::optional<double> min_variance = std::nullopt;
     TransformMode mode = TransformMode::LIMITED;
 #if defined(BICOS_CUDA)
     Precision precision = Precision::DOUBLE;
