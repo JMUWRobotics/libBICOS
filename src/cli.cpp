@@ -53,7 +53,7 @@ int main(int argc, char const* const* argv) {
         ("folder1", "Optional second folder with input images. If specified, file names need to be 0.png, 1.png... Else, folder0 needs to contain 0_left.png, 0_right.png, 1_left.png...", cxxopts::value<std::string>())
         ("t,threshold", "Normalized cross corellation threshold", cxxopts::value<double>()->default_value("0.5"))
         ("s,step", "Subpixel step (optional)", cxxopts::value<float>())
-        ("v,variance", "Minimum intensity variance", cxxopts::value<double>())
+        ("v,variance", "Minimum intensity variance (optional)", cxxopts::value<double>())
         ("limited", "Limit transformation mode. Allows for more images to be used.")
         ("o,outfile", "Output file for disparity image", cxxopts::value<std::string>()->default_value("bicosdisp.png"))
         ("n,stacksize", "Number of images to process. Defaults to all.", cxxopts::value<uint>())

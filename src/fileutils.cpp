@@ -36,6 +36,9 @@ void save_pointcloud(const cv::Mat3f points, const cv::Mat_<BICOS::disparity_t>&
 
     std::ofstream xyz(outfile.replace_extension("xyz"));
 
+    size_t n_nonnormal = 0,
+           n_minusz = 0;
+
     for (int row = 0; row < points.rows; ++row) {
         for (int col = 0; col < points.cols; ++col) {
             if (std::isnan(disparity(row, col)) || disparity(row, col) == BICOS::INVALID_DISP)
@@ -47,8 +50,15 @@ void save_pointcloud(const cv::Mat3f points, const cv::Mat_<BICOS::disparity_t>&
                   y = point[1], 
                   z = point[2];
 
-            if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z) || z < 0.0f)
+            if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) {
+                n_nonnormal++;
                 continue;
+            }
+
+            if (z < 0.0f) {
+                n_minusz++;
+                continue;
+            }
 
             xyz << x << ' ' << y << ' ' << z << '\n';
         }
@@ -57,7 +67,13 @@ void save_pointcloud(const cv::Mat3f points, const cv::Mat_<BICOS::disparity_t>&
     xyz.flush();
     xyz.close();
 
-    std::cout << "Saved pointcloud in ascii-format to\t" << outfile << std::endl;
+    std::cout << "Saved pointcloud in ascii-format to\t" << outfile << '\n';
+    if (n_nonnormal > 0)
+        std::cout << "Skipped " << n_nonnormal << " non-normal fp values\n";
+    if (n_minusz > 0)
+        std::cout << "Skipped " << n_minusz << " points with negative Z\n";
+    
+    std::cout.flush();
 }
 
 void save_disparity(const cv::Mat_<BICOS::disparity_t>& disparity, std::filesystem::path outfile) {
