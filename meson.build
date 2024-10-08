@@ -178,7 +178,8 @@ if googlebench.found()
     sourceroot = meson.project_source_root()
     deps += googlebench
     if impl == 'cuda'
-        available_gpus = run_command('nvidia-smi', '--query-gpu=gpu_name', '--format=csv,noheader', check: true).stdout().strip()
+        available_gpus = ''
+      #available_gpus = run_command('nvidia-smi', '--query-gpu=gpu_name', '--format=csv,noheader', check: true).stdout().strip()
 
         benchmark('cuda',
             executable('bench_cuda',
