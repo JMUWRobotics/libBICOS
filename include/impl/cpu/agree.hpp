@@ -23,7 +23,7 @@
 namespace BICOS::impl::cpu {
 
 template<typename T>
-static double nxcorr(const T* pix0, const T* pix1, size_t n) {
+static double nxcorr(const T* pix0, const T* pix1, size_t n, std::optional<double> minvar) {
     double mean0 = 0.0, mean1 = 0.0;
     for (size_t i = 0; i < n; ++i) {
         mean0 += pix0[i];
@@ -32,16 +32,19 @@ static double nxcorr(const T* pix0, const T* pix1, size_t n) {
     mean0 /= n;
     mean1 /= n;
 
-    double n_expectancy = 0.0, sqdiffsum0 = 0.0, sqdiffsum1 = 0.0;
+    double covar = 0.0, var0 = 0.0, var1 = 0.0;
     for (size_t i = 0; i < n; ++i) {
         double diff0 = pix0[i] - mean0, diff1 = pix1[i] - mean1;
 
-        n_expectancy = std::fma(diff0, diff1, n_expectancy);
-        sqdiffsum0 = std::fma(diff0, diff0, sqdiffsum0);
-        sqdiffsum1 = std::fma(diff1, diff1, sqdiffsum1);
+        covar = std::fma(diff0, diff1, covar);
+        var0 = std::fma(diff0, diff0, var0);
+        var1 = std::fma(diff1, diff1, var1);
     }
 
-    return n_expectancy / std::sqrt(sqdiffsum0 * sqdiffsum1);
+    if (minvar.has_value() && (var0 < *minvar || var1 < *minvar))
+        return -1.0;
+
+    return covar / std::sqrt(var0 * var1);
 }
 
 template<typename TInput>
@@ -51,6 +54,7 @@ static void agree(
     const cv::Mat& stack1,
     size_t n_images,
     double nxcorr_threshold,
+    std::optional<double> min_var,
     cv::Mat_<disparity_t>& ret
 ) {
     auto sz = raw_disp.size();
@@ -75,7 +79,7 @@ static void agree(
                     continue;
 
                 double nxc =
-                    nxcorr(stack0.ptr<TInput>(row, col), stack1.ptr<TInput>(row, idx1), n_images);
+                    nxcorr(stack0.ptr<TInput>(row, col), stack1.ptr<TInput>(row, idx1), n_images, min_var);
 
                 if (nxc < nxcorr_threshold)
                     continue;
@@ -94,6 +98,7 @@ static void agree_subpixel(
     size_t n,
     double nxcorr_threshold,
     float subpixel_step,
+    std::optional<double> min_var,
     cv::Mat_<disparity_t>& ret
 ) {
     auto sz = raw_disp.size();
@@ -121,7 +126,8 @@ static void agree_subpixel(
                     double nxc = nxcorr(
                         stack0.ptr<TInput>(row, col),
                         stack1.ptr<TInput>(row, col1),
-                        n
+                        n,
+                        min_var
                     );
 
                     if (nxc < nxcorr_threshold)
@@ -156,7 +162,7 @@ static void agree_subpixel(
                         for (size_t t = 0; t < n; ++t)
                             interp[t] = (TInput)roundevenf(a[t] * x * x + b[t] * x + c[t]);
 
-                        double nxc = nxcorr(stack0.ptr<TInput>(row, col), interp, n);
+                        double nxc = nxcorr(stack0.ptr<TInput>(row, col), interp, n, min_var);
 
                         if (best_nxcorr < nxc) {
                             best_x = x;

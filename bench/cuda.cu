@@ -42,13 +42,14 @@ constexpr float step = 0.25;
 static const cv::Size size(3300, 2200);
 
 template<typename TPrecision, cuda::corrfun<uint8_t, TPrecision> FCorr>
-__global__ void nxcorr_kernel(const uint8_t* a, const uint8_t* b, size_t n, TPrecision* out) {
-    *out = FCorr(a, b, n);
+__global__ void nxcorr_kernel(const uint8_t* a, const uint8_t* b, size_t n, TPrecision minvar, TPrecision* out) {
+    *out = FCorr(a, b, n, minvar);
 }
 
 template<typename TPrecision, cuda::corrfun<uint8_t, TPrecision> FCorr>
 void bench_nxcorr_subroutine(benchmark::State& state) {
     uint8_t _a[50], _b[50], *a, *b;
+    TPrecision minvar = 100;
 
     for (size_t i = 0; i < sizeof(_a); ++i) {
         _a[i] = rand();
@@ -65,7 +66,7 @@ void bench_nxcorr_subroutine(benchmark::State& state) {
     cudaMalloc(&out, 1);
 
     for (auto _: state) {
-        nxcorr_kernel<TPrecision, FCorr><<<1, 1>>>(a, b, sizeof(_a), out);
+        nxcorr_kernel<TPrecision, FCorr><<<1, 1>>>(a, b, sizeof(_a), minvar, out);
         cudaDeviceSynchronize();
     }
 }
@@ -307,10 +308,13 @@ void bench_integration(benchmark::State& state) {
 BENCHMARK(bench_nxcorr_subroutine<float, cuda::nxcorrf>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
+BENCHMARK(bench_nxcorr_subroutine<float, cuda::nxcorrf_minvar>)
+    ->Repetitions(10)
+    ->ReportAggregatesOnly(true);
 BENCHMARK(bench_nxcorr_subroutine<double, cuda::nxcorrd>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
-BENCHMARK(bench_nxcorr_subroutine<__nv_bfloat16, cuda::nxcorrbf>)
+BENCHMARK(bench_nxcorr_subroutine<double, cuda::nxcorrd_minvar>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
 
