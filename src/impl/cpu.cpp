@@ -88,27 +88,28 @@ void match(
         : 4 * n - 7;
 
     const cv::Size size = _stack0.front().size();
+    double min_var = n * cfg.min_variance.value_or(1.0);
 
     cv::Mat1s raw_disp;
 
     switch (required_bits) {
         case 0 ... 32:
             if (depth == CV_8U)
-                match_impl<uint8_t, uint32_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.min_variance, cfg.mode, size, n, disparity);
+                match_impl<uint8_t, uint32_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, min_var, cfg.mode, size, n, disparity);
             else
-                match_impl<uint16_t, uint32_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.min_variance, cfg.mode, size, n, disparity);
+                match_impl<uint16_t, uint32_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, min_var, cfg.mode, size, n, disparity);
             break;
         case 33 ... 64:
             if (depth == CV_8U)
-                match_impl<uint8_t, uint64_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.min_variance, cfg.mode, size, n, disparity);
+                match_impl<uint8_t, uint64_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, min_var, cfg.mode, size, n, disparity);
             else
-                match_impl<uint16_t, uint64_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.min_variance, cfg.mode, size, n, disparity);
+                match_impl<uint16_t, uint64_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, min_var, cfg.mode, size, n, disparity);
             break;
         case 65 ... 128:
             if (depth == CV_8U)
-                match_impl<uint8_t, uint128_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.min_variance, cfg.mode, size, n, disparity);
+                match_impl<uint8_t, uint128_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, min_var, cfg.mode, size, n, disparity);
             else
-                match_impl<uint16_t, uint128_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.min_variance, cfg.mode, size, n, disparity);
+                match_impl<uint16_t, uint128_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, min_var, cfg.mode, size, n, disparity);
             break;
         default:
             throw std::invalid_argument(std::format("input stacks too large, would require {} bits", required_bits));

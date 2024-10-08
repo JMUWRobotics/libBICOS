@@ -26,10 +26,10 @@
 namespace BICOS::impl::cuda {
 
 template<typename T, typename V>
-using corrfun = V (*)(const T*, const T*, size_t);
+using corrfun = V (*)(const T*, const T*, size_t, V);
 
 template<typename T>
-__device__ __forceinline__ double nxcorrd(const T* pix0, const T* pix1, size_t n) {
+__device__ __forceinline__ double nxcorrd(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] double minvar) {
     double mean0 = 0.0, mean1 = 0.0;
     for (size_t i = 0; i < n; ++i) {
         mean0 = __dadd_rn(mean0, pix0[i]);
@@ -39,22 +39,46 @@ __device__ __forceinline__ double nxcorrd(const T* pix0, const T* pix1, size_t n
     mean0 = __ddiv_rn(mean0, n);
     mean1 = __ddiv_rn(mean1, n);
 
-    double n_expectancy = 0.0, sqdiffsum0 = 0.0, sqdiffsum1 = 0.0;
+    double covar = 0.0, var0 = 0.0, var1 = 0.0;
     for (size_t i = 0; i < n; ++i) {
         double diff0 = pix0[i] - mean0, diff1 = pix1[i] - mean1;
 
-        n_expectancy = __fma_rn(diff0, diff1, n_expectancy);
-        sqdiffsum0 = __fma_rn(diff0, diff0, sqdiffsum0);
-        sqdiffsum1 = __fma_rn(diff1, diff1, sqdiffsum1);
+        covar = __fma_rn(diff0, diff1, covar);
+        var0 = __fma_rn(diff0, diff0, var0);
+        var1 = __fma_rn(diff1, diff1, var1);
     }
 
-    // return copysign(n_expectancy * n_expectancy / (sqdiffsum0 * sqdiffsum1), n_expectancy);
-
-    return n_expectancy * rsqrt(sqdiffsum0 * sqdiffsum1);
+    return covar * rsqrt(var0 * var1);
 }
 
 template<typename T>
-__device__ __forceinline__ float nxcorrf(const T* pix0, const T* pix1, size_t n) {
+__device__ __forceinline__ double nxcorrd_minvar(const T* pix0, const T* pix1, size_t n, double minvar) {
+    double mean0 = 0.0, mean1 = 0.0;
+    for (size_t i = 0; i < n; ++i) {
+        mean0 = __dadd_rn(mean0, pix0[i]);
+        mean1 = __dadd_rn(mean1, pix1[i]);
+    }
+
+    mean0 = __ddiv_rn(mean0, n);
+    mean1 = __ddiv_rn(mean1, n);
+
+    double covar = 0.0, var0 = 0.0, var1 = 0.0;
+    for (size_t i = 0; i < n; ++i) {
+        double diff0 = pix0[i] - mean0, diff1 = pix1[i] - mean1;
+
+        covar = __fma_rn(diff0, diff1, covar);
+        var0 = __fma_rn(diff0, diff0, var0);
+        var1 = __fma_rn(diff1, diff1, var1);
+    }
+
+    if (var0 < minvar || var1 < minvar)
+        return -1.0;
+
+    return covar * rsqrt(var0 * var1);
+}
+
+template<typename T>
+__device__ __forceinline__ float nxcorrf(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] float minvar) {
     float mean0 = 0.0f, mean1 = 0.0f;
     for (size_t i = 0; i < n; ++i) {
         mean0 = __fadd_rn(mean0, pix0[i]);
@@ -64,18 +88,42 @@ __device__ __forceinline__ float nxcorrf(const T* pix0, const T* pix1, size_t n)
     mean0 = __fdiv_rn(mean0, n);
     mean1 = __fdiv_rn(mean1, n);
 
-    float n_expectancy = 0.0f, sqdiffsum0 = 0.0f, sqdiffsum1 = 0.0f;
+    float covar = 0.0f, var0 = 0.0f, var1 = 0.0f;
     for (size_t i = 0; i < n; ++i) {
         float diff0 = pix0[i] - mean0, diff1 = pix1[i] - mean1;
 
-        n_expectancy = __fmaf_rn(diff0, diff1, n_expectancy);
-        sqdiffsum0 = __fmaf_rn(diff0, diff0, sqdiffsum0);
-        sqdiffsum1 = __fmaf_rn(diff1, diff1, sqdiffsum1);
+        covar = __fmaf_rn(diff0, diff1, covar);
+        var0 = __fmaf_rn(diff0, diff0, var0);
+        var1 = __fmaf_rn(diff1, diff1, var1);
     }
 
-    // return copysignf(n_expectancy * n_expectancy / (sqdiffsum0 * sqdiffsum1), n_expectancy);
+    return covar * rsqrtf(var0 * var1);
+}
 
-    return n_expectancy * rsqrtf(sqdiffsum0 * sqdiffsum1);
+template<typename T>
+__device__ __forceinline__ float nxcorrf_minvar(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] float minvar) {
+    float mean0 = 0.0f, mean1 = 0.0f;
+    for (size_t i = 0; i < n; ++i) {
+        mean0 = __fadd_rn(mean0, pix0[i]);
+        mean1 = __fadd_rn(mean1, pix1[i]);
+    }
+
+    mean0 = __fdiv_rn(mean0, n);
+    mean1 = __fdiv_rn(mean1, n);
+
+    float covar = 0.0f, var0 = 0.0f, var1 = 0.0f;
+    for (size_t i = 0; i < n; ++i) {
+        float diff0 = pix0[i] - mean0, diff1 = pix1[i] - mean1;
+
+        covar = __fmaf_rn(diff0, diff1, covar);
+        var0 = __fmaf_rn(diff0, diff0, var0);
+        var1 = __fmaf_rn(diff1, diff1, var1);
+    }
+
+    if (var0 < minvar || var1 < minvar)
+        return -1.0f;
+
+    return covar * rsqrtf(var0 * var1);
 }
 
 template<typename TInput, typename TPrecision, corrfun<TInput, TPrecision> FCorr>
@@ -84,6 +132,7 @@ __global__ void agree_kernel(
     const cv::cuda::PtrStepSz<TInput>* stacks,
     size_t n,
     TPrecision nxcorr_threshold,
+    TPrecision min_var,
     cv::cuda::PtrStepSz<disparity_t> out
 ) {
     const int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -117,7 +166,7 @@ __global__ void agree_kernel(
 #endif
     }
 
-    TPrecision nxc = FCorr(pix0, pix1, n);
+    TPrecision nxc = FCorr(pix0, pix1, n, min_var);
 
     if (nxc < nxcorr_threshold)
         return;
@@ -132,6 +181,7 @@ __global__ void agree_subpixel_kernel(
     size_t n,
     TPrecision nxcorr_threshold,
     float subpixel_step,
+    TPrecision min_var,
     cv::cuda::PtrStepSz<disparity_t> out
 ) {
     const int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -166,7 +216,7 @@ __global__ void agree_subpixel_kernel(
     }
 
     if (col1 == 0 || col1 == out.cols - 1) {
-        TPrecision nxc = FCorr(pix0, pix1, n);
+        TPrecision nxc = FCorr(pix0, pix1, n, min_var);
 
         if (nxc < nxcorr_threshold)
             return;
@@ -195,7 +245,7 @@ __global__ void agree_subpixel_kernel(
             for (size_t t = 0; t < n; ++t)
                 interp[t] = (TInput)__float2int_rn(a[t] * x * x + b[t] * x + c[t]);
 
-            TPrecision nxc = FCorr(pix0, interp, n);
+            TPrecision nxc = FCorr(pix0, interp, n, min_var);
 
             if (best_nxcorr < nxc) {
                 best_x = x;
@@ -219,6 +269,7 @@ __global__ void agree_subpixel_kernel_smem(
     size_t n,
     TPrecision nxcorr_threshold,
     float subpixel_step,
+    TPrecision min_var,
     cv::cuda::PtrStepSz<disparity_t> out
 ) {
     const int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -262,7 +313,7 @@ __global__ void agree_subpixel_kernel_smem(
     }
 
     if (col1 == 0 || col1 == out.cols - 1) {
-        TPrecision nxc = FCorr(pix0, row1 + n * col1, n);
+        TPrecision nxc = FCorr(pix0, row1 + n * col1, n, min_var);
 
         if (nxc < nxcorr_threshold)
             return;
@@ -291,7 +342,7 @@ __global__ void agree_subpixel_kernel_smem(
             for (size_t t = 0; t < n; ++t)
                 interp[t] = (TInput)__float2int_rn(a[t] * x * x + b[t] * x + c[t]);
 
-            TPrecision nxc = FCorr(pix0, interp, n);
+            TPrecision nxc = FCorr(pix0, interp, n, min_var);
 
             if (best_nxcorr < nxc) {
                 best_x = x;

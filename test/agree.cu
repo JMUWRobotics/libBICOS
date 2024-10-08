@@ -89,7 +89,7 @@ int main(void) {
     float step = 0.25f;
 
     cuda::agree_subpixel_kernel<INPUT_TYPE, double, cuda::nxcorrd>
-        <<<grid, block>>>(randdisp_dev, devptr, n, thresh, step, devout);
+        <<<grid, block>>>(randdisp_dev, devptr, n, thresh, step, minvar, devout);
 
     assertCudaSuccess(cudaGetLastError());
 
@@ -115,7 +115,7 @@ int main(void) {
     block = cuda::max_blocksize(cuda::agree_kernel<INPUT_TYPE, double, cuda::nxcorrd>);
     grid = create_grid(block, randsize);
 
-    cuda::agree_kernel<INPUT_TYPE, double, cuda::nxcorrd><<<grid, block>>>(randdisp_dev, devptr, n, thresh, devout);
+    cuda::agree_kernel<INPUT_TYPE, double, cuda::nxcorrd><<<grid, block>>>(randdisp_dev, devptr, n, thresh, minvar, devout);
 
     assertCudaSuccess(cudaGetLastError());
 
