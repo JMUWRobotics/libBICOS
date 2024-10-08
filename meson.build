@@ -17,12 +17,15 @@
 
 project('libBICOS', 'cpp', version: '1.1.0-devel', license: 'LGPL-3.0-or-later')
 
-pkg = import('pkgconfig')
+pkg = import('pkgconfig', required: false)
 
 impl = get_option('implementation')
+cudaarch = get_option('cuda-arch')
 srcs = files('src/lib.cpp')
 incls = include_directories('include')
 deps = [dependency('opencv4')]
+
+cuda_module = import('unstable-cuda', required: impl == 'cuda' and cudaarch != 'Common')
 
 is_debug = get_option('buildtype') in ['debug', 'debugoptimized']
 if is_debug
