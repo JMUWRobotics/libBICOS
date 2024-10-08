@@ -317,12 +317,14 @@ BENCHMARK(bench_nxcorr_subroutine<double, true, cuda::nxcorrd<true>>)
 BENCHMARK(bench_nxcorr_subroutine<double, false, cuda::nxcorrd<false>>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
+/*
 BENCHMARK(bench_nxcorr_subroutine<__nv_bfloat16, false, cuda::nxcorrbf<false>>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
 BENCHMARK(bench_nxcorr_subroutine<__nv_bfloat16, true, cuda::nxcorrbf<true>>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
+*/
 
 BENCHMARK(bench_agree_kernel<uint8_t>);
 BENCHMARK(bench_agree_kernel<uint16_t>);
