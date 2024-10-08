@@ -1,2 +1,2 @@
 option('implementation', type: 'combo', choices: ['cuda', 'cpu'], description: 'Choose the implementation to use')
-option('cuda-arch', type: 'string', description: 'Define specific cuda architecture. See https://mesonbuild.com/Cuda-module.html#nvcc_arch_flags for details')
+option('cuda-arch', type: 'combo', choices: ['Common', 'Ampere'], description: 'Define specific cuda architecture. See https://mesonbuild.com/Cuda-module.html#nvcc_arch_flags for details')
