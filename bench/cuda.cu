@@ -41,12 +41,12 @@ constexpr double thresh = 0.9;
 constexpr float step = 0.25;
 static const cv::Size size(3300, 2200);
 
-template<typename TPrecision, cuda::corrfun<uint8_t, TPrecision> FCorr>
+template<typename TPrecision, bool MINVAR, cuda::corrfun<MINVAR, uint8_t, TPrecision> FCorr>
 __global__ void nxcorr_kernel(const uint8_t* a, const uint8_t* b, size_t n, TPrecision minvar, TPrecision* out) {
     *out = FCorr(a, b, n, minvar);
 }
 
-template<typename TPrecision, cuda::corrfun<uint8_t, TPrecision> FCorr>
+template<typename TPrecision, bool MINVAR, cuda::corrfun<MINVAR, uint8_t, TPrecision> FCorr>
 void bench_nxcorr_subroutine(benchmark::State& state) {
     uint8_t _a[50], _b[50], *a, *b;
     TPrecision minvar = 100;
@@ -305,16 +305,22 @@ void bench_integration(benchmark::State& state) {
     }
 }
 
-BENCHMARK(bench_nxcorr_subroutine<float, cuda::nxcorrf>)
+BENCHMARK(bench_nxcorr_subroutine<float, false, cuda::nxcorrf<false>>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
-BENCHMARK(bench_nxcorr_subroutine<float, cuda::nxcorrf_minvar>)
+BENCHMARK(bench_nxcorr_subroutine<float, true, cuda::nxcorrf<true>>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
-BENCHMARK(bench_nxcorr_subroutine<double, cuda::nxcorrd>)
+BENCHMARK(bench_nxcorr_subroutine<double, true, cuda::nxcorrd<true>>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
-BENCHMARK(bench_nxcorr_subroutine<double, cuda::nxcorrd_minvar>)
+BENCHMARK(bench_nxcorr_subroutine<double, false, cuda::nxcorrd<false>>)
+    ->Repetitions(10)
+    ->ReportAggregatesOnly(true);
+BENCHMARK(bench_nxcorr_subroutine<__nv_bfloat16, false, cuda::nxcorrbf<false>>)
+    ->Repetitions(10)
+    ->ReportAggregatesOnly(true);
+BENCHMARK(bench_nxcorr_subroutine<__nv_bfloat16, true, cuda::nxcorrbf<true>>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
 
