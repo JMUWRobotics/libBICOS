@@ -75,6 +75,7 @@ int main(void) {
     randdisp_dev.upload(randdisp);
 
     double thresh = randreal(-0.9, 0.9);
+    double minvar = randreal(0.0, 75.0);
 
     cv::cuda::GpuMat devout(randsize, cv::DataType<disparity_t>::type);
     devout.setTo(INVALID_DISP);
@@ -92,7 +93,7 @@ int main(void) {
 
     assertCudaSuccess(cudaGetLastError());
 
-    cpu::agree_subpixel<INPUT_TYPE>(randdisp, hinput_l, hinput_r, n, thresh, step, hostout);
+    cpu::agree_subpixel<INPUT_TYPE>(randdisp, hinput_l, hinput_r, n, thresh, step, minvar, hostout);
 
     assertCudaSuccess(cudaDeviceSynchronize());
 
@@ -118,7 +119,7 @@ int main(void) {
 
     assertCudaSuccess(cudaGetLastError());
 
-    cpu::agree<INPUT_TYPE>(randdisp, hinput_l, hinput_r, n, thresh, hostout);
+    cpu::agree<INPUT_TYPE>(randdisp, hinput_l, hinput_r, n, thresh, minvar, hostout);
 
     assertCudaSuccess(cudaDeviceSynchronize());
 
