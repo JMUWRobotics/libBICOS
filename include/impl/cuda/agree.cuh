@@ -26,10 +26,10 @@
 
 namespace BICOS::impl::cuda {
 
-template<typename T, typename V>
+template<bool MINVAR, typename T, typename V>
 using corrfun = V (*)(const T*, const T*, size_t, V);
 
-template<typename T>
+template<bool MINVAR, typename T>
 __device__ __forceinline__ double nxcorrd(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] double minvar) {
     double mean0 = 0.0, mean1 = 0.0;
     for (size_t i = 0; i < n; ++i) {
@@ -49,36 +49,14 @@ __device__ __forceinline__ double nxcorrd(const T* pix0, const T* pix1, size_t n
         var1 = __fma_rn(diff1, diff1, var1);
     }
 
-    return covar * rsqrt(var0 * var1);
-}
-
-template<typename T>
-__device__ __forceinline__ double nxcorrd_minvar(const T* pix0, const T* pix1, size_t n, double minvar) {
-    double mean0 = 0.0, mean1 = 0.0;
-    for (size_t i = 0; i < n; ++i) {
-        mean0 = __dadd_rn(mean0, pix0[i]);
-        mean1 = __dadd_rn(mean1, pix1[i]);
-    }
-
-    mean0 = __ddiv_rn(mean0, n);
-    mean1 = __ddiv_rn(mean1, n);
-
-    double covar = 0.0, var0 = 0.0, var1 = 0.0;
-    for (size_t i = 0; i < n; ++i) {
-        double diff0 = pix0[i] - mean0, diff1 = pix1[i] - mean1;
-
-        covar = __fma_rn(diff0, diff1, covar);
-        var0 = __fma_rn(diff0, diff0, var0);
-        var1 = __fma_rn(diff1, diff1, var1);
-    }
-
-    if (var0 < minvar || var1 < minvar)
-        return -1.0;
+    if constexpr (MINVAR)
+        if (var0 < minvar || var1 < minvar)
+            return -1.0;
 
     return covar * rsqrt(var0 * var1);
 }
 
-template<typename T>
+template<bool MINVAR, typename T>
 __device__ __forceinline__ float nxcorrf(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] float minvar) {
     float mean0 = 0.0f, mean1 = 0.0f;
     for (size_t i = 0; i < n; ++i) {
@@ -98,57 +76,39 @@ __device__ __forceinline__ float nxcorrf(const T* pix0, const T* pix1, size_t n,
         var1 = __fmaf_rn(diff1, diff1, var1);
     }
 
-    return covar * rsqrtf(var0 * var1);
-}
-
-template<typename T>
-__device__ __forceinline__ float nxcorrf_minvar(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] float minvar) {
-    float mean0 = 0.0f, mean1 = 0.0f;
-    for (size_t i = 0; i < n; ++i) {
-        mean0 = __fadd_rn(mean0, pix0[i]);
-        mean1 = __fadd_rn(mean1, pix1[i]);
-    }
-
-    mean0 = __fdiv_rn(mean0, n);
-    mean1 = __fdiv_rn(mean1, n);
-
-    float covar = 0.0f, var0 = 0.0f, var1 = 0.0f;
-    for (size_t i = 0; i < n; ++i) {
-        float diff0 = pix0[i] - mean0, diff1 = pix1[i] - mean1;
-
-        covar = __fmaf_rn(diff0, diff1, covar);
-        var0 = __fmaf_rn(diff0, diff0, var0);
-        var1 = __fmaf_rn(diff1, diff1, var1);
-    }
-
-    if (var0 < minvar || var1 < minvar)
-        return -1.0f;
+    if constexpr (MINVAR)
+        if (var0 < minvar || var1 < minvar)
+            return -1.0f;
 
     return covar * rsqrtf(var0 * var1);
 }
 
-template<typename T>
-__device__ __forceinline__ __nv_bfloat16 nxcorrbf(const T* pix0, const T* pix1, size_t n) {
+template<bool MINVAR, typename T>
+__device__ __forceinline__ __nv_bfloat16 nxcorrbf(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] __nv_bfloat16 minvar) {
     __nv_bfloat162 mean(CUDART_ZERO_BF16, CUDART_ZERO_BF16);
     for (size_t i = 0; i < n; ++i)
         mean = __hadd2_rn(mean, __nv_bfloat162(pix0[i], pix1[i]));
 
     mean /= __nv_bfloat162(n, n);
 
-    __nv_bfloat162 sqdiffsum(CUDART_ZERO_BF16, CUDART_ZERO_BF16);
-    __nv_bfloat16  n_expectancy = CUDART_ZERO_BF16;
+    __nv_bfloat162 var(CUDART_ZERO_BF16, CUDART_ZERO_BF16);
+    __nv_bfloat16  covar = CUDART_ZERO_BF16;
 
     for (size_t i = 0; i < n; ++i) {
         __nv_bfloat162 diff = __nv_bfloat162(pix0[i], pix1[i]) - mean;
 
-        n_expectancy = __hfma(diff.x, diff.y, n_expectancy);
-        sqdiffsum = __hfma2(diff, diff, sqdiffsum);
+        covar = __hfma(diff.x, diff.y, covar);
+        var = __hfma2(diff, diff, var);
     }
 
-    return n_expectancy * hrsqrt(sqdiffsum.x * sqdiffsum.y);
+    if constexpr (MINVAR)
+        if (var.x < minvar || var.y < minvar)
+            return -CUDART_ONE_BF16;
+
+    return covar * hrsqrt(var.x * var.y);
 }
 
-template<typename TInput, typename TPrecision, corrfun<TInput, TPrecision> FCorr>
+template<typename TInput, typename TPrecision, bool MINVAR, corrfun<MINVAR, TInput, TPrecision> FCorr>
 __global__ void agree_kernel(
     const cv::cuda::PtrStepSz<int16_t> raw_disp,
     const cv::cuda::PtrStepSz<TInput>* stacks,
@@ -196,7 +156,7 @@ __global__ void agree_kernel(
     out(row, col) = d;
 }
 
-template<typename TInput, typename TPrecision, corrfun<TInput, TPrecision> FCorr>
+template<typename TInput, typename TPrecision, bool MINVAR, corrfun<MINVAR, TInput, TPrecision> FCorr>
 __global__ void agree_subpixel_kernel(
     const cv::cuda::PtrStepSz<int16_t> raw_disp,
     const cv::cuda::PtrStepSz<TInput>* stacks,
@@ -284,7 +244,7 @@ __global__ void agree_subpixel_kernel(
     }
 }
 
-template<typename TInput, typename TPrecision, corrfun<TInput, TPrecision> FCorr>
+template<typename TInput, typename TPrecision, bool MINVAR, corrfun<MINVAR, TInput, TPrecision> FCorr>
 __global__ void agree_subpixel_kernel_smem(
     const cv::cuda::PtrStepSz<int16_t> raw_disp,
     const cv::cuda::PtrStepSz<TInput>* stacks,
