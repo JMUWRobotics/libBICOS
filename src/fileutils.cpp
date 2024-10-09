@@ -72,7 +72,7 @@ void save_disparity(const cv::Mat_<BICOS::disparity_t>& disparity, std::filesyst
     cv::Mat normalized, colorized;
 
     cv::normalize(disparity, normalized, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-    normalized.setTo(0, disparity == -1);
+    normalized.setTo(0, disparity == INVALID_DISP);
     cv::applyColorMap(normalized, colorized, cv::COLORMAP_TURBO);
 
     if (!cv::imwrite(outfile.replace_extension("png"), colorized))
