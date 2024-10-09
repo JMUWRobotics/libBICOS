@@ -55,7 +55,7 @@ cv::Mat1s bicos(
             for (int col0 = 0; col0 < ret.cols; ++col0) {
                 const TDescriptor d0 = drow0[col0];
 
-                int best_col1 = -1, min_cost = INT_MAX, num_duplicate_minima = 0;
+                int best_col1 = INT_MIN, min_cost = INT_MAX, num_duplicate_minima = 0;
 
                 for (int col1 = 0; col1 < ret.cols; ++col1) {
                     const TDescriptor d1 = drow1[col1];
@@ -71,10 +71,10 @@ cv::Mat1s bicos(
                     }
                 }
 
-                if (0 < num_duplicate_minima)
+                if (INT_MIN == best_col1 || 0 < num_duplicate_minima)
                     continue;
 
-                ret(row, col0) = std::abs(col0 - best_col1);
+                ret(row, col0) = col0 - best_col1;
             }
         }
     });

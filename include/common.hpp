@@ -33,7 +33,7 @@ using uint128_t = __uint128_t;
 
 template<typename T>
 constexpr T INVALID_DISP_ =
-    std::numeric_limits<T>::has_quiet_NaN ? std::numeric_limits<T>::quiet_NaN() : (T)-1;
+    std::numeric_limits<T>::has_quiet_NaN ? std::numeric_limits<T>::quiet_NaN() : std::numeric_limits<T>::min();
 constexpr disparity_t INVALID_DISP = INVALID_DISP_<disparity_t>;
 
 #if defined(BICOS_CPU)
