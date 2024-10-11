@@ -7,7 +7,7 @@ BInary COrrespondence Search for multi-shot stereo imaging, with optional CUDA a
 Dependencies:
 
 - `gcc` or equivalent C compiler with C++20 support (build)
-- [`meson` >= 1.1.0](https://github.com/mesonbuild/meson) (build)
+- [`meson`](https://github.com/mesonbuild/meson) >= 1.1.0 (build)
 - `opencv 4.x`
 - `cuda 12.x` including toolkit 
 - [`cxxopts`](https://github.com/jarro2783/cxxopts) (optional, for cli)
