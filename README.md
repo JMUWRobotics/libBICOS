@@ -22,8 +22,8 @@ $ git checkout v1.1.0
 
 $ meson setup builddir --buildtype release
 
-# optional, if you do not have access to a CUDA-capable GPU
-$ meson configure -Dimplementation=cpu builddir
+# optional but recommended if you have access to a CUDA-capable GPU
+$ meson configure -Dimplementation=cuda builddir
 
 $ meson install -C builddir
 ```
