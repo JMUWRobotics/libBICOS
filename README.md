@@ -6,7 +6,8 @@ BInary COrrespondence Search for multi-shot stereo imaging, with optional CUDA a
 
 Dependencies:
 
-- [`meson`](https://github.com/mesonbuild/meson) (build)
+- `gcc` or equivalent C compiler with C++20 support (build)
+- [`meson`](https://github.com/mesonbuild/meson) >= 1.1.0 (build)
 - `opencv 4.x`
 - `cuda 12.x` including toolkit 
 - [`cxxopts`](https://github.com/jarro2783/cxxopts) (optional, for cli)
@@ -17,7 +18,7 @@ $ git clone https://github.com/JMUWRobotics/libBICOS
 $ cd libBICOS
 
 # optional but recommended, pick a release depending on your needs
-$ git checkout v1.0.0
+$ git checkout v1.1.0
 
 $ meson setup builddir --buildtype release
 
@@ -27,7 +28,7 @@ $ meson configure -Dimplementation=cpu builddir
 $ meson install -C builddir
 ```
 
-The versioning scheme of the library is [Semantic Versioning](https://semver.org/)
+The versioning scheme of the library is [Semantic Versioning](https://semver.org/).
 
 ## Benchmarking:
 

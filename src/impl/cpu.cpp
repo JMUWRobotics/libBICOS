@@ -36,6 +36,7 @@ static void match_impl(
     const cv::Mat& stack1,
     double thresh,
     std::optional<float> step,
+    std::optional<double> min_var,
     TransformMode mode,
     cv::Size sz,
     size_t n,
@@ -56,9 +57,9 @@ static void match_impl(
     }
 
     if (step.has_value())
-        agree_subpixel<TInput>(raw_disp, stack0, stack1, n, thresh, step.value(), out);
+        agree_subpixel<TInput>(raw_disp, stack0, stack1, n, thresh, step.value(), min_var, out);
     else
-        agree<TInput>(raw_disp, stack0, stack1, n, thresh, out);
+        agree<TInput>(raw_disp, stack0, stack1, n, thresh, min_var, out);
 }
 
 void match(
@@ -87,27 +88,28 @@ void match(
         : 4 * n - 7;
 
     const cv::Size size = _stack0.front().size();
+    double min_var = n * cfg.min_variance.value_or(1.0);
 
     cv::Mat1s raw_disp;
 
     switch (required_bits) {
         case 0 ... 32:
             if (depth == CV_8U)
-                match_impl<uint8_t, uint32_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.mode, size, n, disparity);
+                match_impl<uint8_t, uint32_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, min_var, cfg.mode, size, n, disparity);
             else
-                match_impl<uint16_t, uint32_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.mode, size, n, disparity);
+                match_impl<uint16_t, uint32_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, min_var, cfg.mode, size, n, disparity);
             break;
         case 33 ... 64:
             if (depth == CV_8U)
-                match_impl<uint8_t, uint64_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.mode, size, n, disparity);
+                match_impl<uint8_t, uint64_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, min_var, cfg.mode, size, n, disparity);
             else
-                match_impl<uint16_t, uint64_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.mode, size, n, disparity);
+                match_impl<uint16_t, uint64_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, min_var, cfg.mode, size, n, disparity);
             break;
         case 65 ... 128:
             if (depth == CV_8U)
-                match_impl<uint8_t, uint128_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.mode, size, n, disparity);
+                match_impl<uint8_t, uint128_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, min_var, cfg.mode, size, n, disparity);
             else
-                match_impl<uint16_t, uint128_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, cfg.mode, size, n, disparity);
+                match_impl<uint16_t, uint128_t>(stack0, stack1, cfg.nxcorr_thresh, cfg.subpixel_step, min_var, cfg.mode, size, n, disparity);
             break;
         default:
             throw std::invalid_argument(std::format("input stacks too large, would require {} bits", required_bits));

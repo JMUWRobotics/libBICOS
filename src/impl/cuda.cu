@@ -41,6 +41,7 @@ static void match_impl(
     Precision precision,
     TransformMode mode,
     std::optional<float> subpixel_step,
+    std::optional<double> _min_var,
     cv::cuda::GpuMat& out,
     cv::cuda::Stream& _stream
 ) {
@@ -127,34 +128,70 @@ static void match_impl(
 
     // clang-format off
 
+    // TODO: switch to flags and LUT for function calls
+
+    double min_var = _min_var.value_or(1.0) * n_images;
+
     switch (precision) {
         case Precision::SINGLE:
             if (subpixel_step.has_value()) {
-                block = max_blocksize(agree_subpixel_kernel<TInput, float, nxcorrf>);
-                grid = create_grid(block, sz);
-                agree_subpixel_kernel<TInput, float, nxcorrf>
-                    <<<grid, block, 0, mainstream>>>(
-                        bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), out);
+                if (_min_var.has_value()) {
+                    block = max_blocksize(agree_subpixel_kernel<TInput, float, true, nxcorrf<true>>);
+                    grid = create_grid(block, sz);
+                    agree_subpixel_kernel<TInput, float, true, nxcorrf<true>>
+                        <<<grid, block, 0, mainstream>>>(
+                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), min_var, out);
+                } else {
+                    block = max_blocksize(agree_subpixel_kernel<TInput, float, false, nxcorrf<false>>);
+                    grid = create_grid(block, sz);
+                    agree_subpixel_kernel<TInput, float, false, nxcorrf<false>>
+                        <<<grid, block, 0, mainstream>>>(
+                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), min_var, out);
+                }
             } else {
-                block = max_blocksize(agree_kernel<TInput, float, nxcorrf>);
-                grid = create_grid(block, sz);
-                agree_kernel<TInput, float, nxcorrf>
-                    <<<grid, block, 0, mainstream>>>(
-                        bicos_disp, ptrs_dev, n_images, nxcorr_threshold, out);
+                if (_min_var.has_value()) {
+                    block = max_blocksize(agree_kernel<TInput, float, true, nxcorrf<true>>);
+                    grid = create_grid(block, sz);
+                    agree_kernel<TInput, float, true, nxcorrf<true>>
+                        <<<grid, block, 0, mainstream>>>(
+                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, min_var, out);
+                } else {
+                    block = max_blocksize(agree_kernel<TInput, float, false, nxcorrf<false>>);
+                    grid = create_grid(block, sz);
+                    agree_kernel<TInput, float, false, nxcorrf<false>>
+                        <<<grid, block, 0, mainstream>>>(
+                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, min_var, out);
+                }
             } break;
         case Precision::DOUBLE:
             if (subpixel_step.has_value()) {
-                block = max_blocksize(agree_subpixel_kernel<TInput, double, nxcorrd>);
-                grid = create_grid(block, sz);
-                agree_subpixel_kernel<TInput, double, nxcorrd>
-                    <<<grid, block, 0, mainstream>>>(
-                        bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), out);
+                if (_min_var.has_value()) {
+                    block = max_blocksize(agree_subpixel_kernel<TInput, double, true, nxcorrd<true>>);
+                    grid = create_grid(block, sz);
+                    agree_subpixel_kernel<TInput, double, true, nxcorrd<true>>
+                        <<<grid, block, 0, mainstream>>>(
+                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), min_var, out);
+                } else {
+                    block = max_blocksize(agree_subpixel_kernel<TInput, double, false, nxcorrd<false>>);
+                    grid = create_grid(block, sz);
+                    agree_subpixel_kernel<TInput, double, false, nxcorrd<false>>
+                        <<<grid, block, 0, mainstream>>>(
+                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), min_var, out);
+                }
             } else {
-                block = max_blocksize(agree_kernel<TInput, double, nxcorrd>);
-                grid = create_grid(block, sz);
-                agree_kernel<TInput, double, nxcorrd>
-                    <<<grid, block, 0, mainstream>>>(
-                        bicos_disp, ptrs_dev, n_images, nxcorr_threshold, out);
+                if (_min_var.has_value()) {
+                    block = max_blocksize(agree_kernel<TInput, double, true, nxcorrd<true>>);
+                    grid = create_grid(block, sz);
+                    agree_kernel<TInput, double, true, nxcorrd<true>>
+                        <<<grid, block, 0, mainstream>>>(
+                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, min_var, out);
+                } else {
+                    block = max_blocksize(agree_kernel<TInput, double, false, nxcorrd<false>>);
+                    grid = create_grid(block, sz);
+                    agree_kernel<TInput, double, false, nxcorrd<false>>
+                        <<<grid, block, 0, mainstream>>>(
+                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, min_var, out);
+                }
             } break;
     }
 
@@ -183,21 +220,21 @@ void match(
     switch (required_bits) {
         case 0 ... 32:
             if (depth == CV_8U)
-                match_impl<uint8_t, uint32_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, disparity, stream);
+                match_impl<uint8_t, uint32_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, cfg.min_variance, disparity, stream);
             else
-                match_impl<uint16_t, uint32_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, disparity, stream);
+                match_impl<uint16_t, uint32_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, cfg.min_variance, disparity, stream);
             break;
         case 33 ... 64:
             if (depth == CV_8U)
-                match_impl<uint8_t, uint64_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, disparity, stream);
+                match_impl<uint8_t, uint64_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, cfg.min_variance, disparity, stream);
             else
-                match_impl<uint16_t, uint64_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, disparity, stream);
+                match_impl<uint16_t, uint64_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, cfg.min_variance, disparity, stream);
             break;
         case 65 ... 128:
             if (depth == CV_8U)
-                match_impl<uint8_t, uint128_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, disparity, stream);
+                match_impl<uint8_t, uint128_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, cfg.min_variance, disparity, stream);
             else
-                match_impl<uint16_t, uint128_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, disparity, stream);
+                match_impl<uint16_t, uint128_t>(_stack0, _stack1, n, sz, cfg.nxcorr_thresh, cfg.precision, cfg.mode, cfg.subpixel_step, cfg.min_variance, disparity, stream);
             break;
         default:
             throw std::invalid_argument("input stacks too large, exceeding 128 bits");
