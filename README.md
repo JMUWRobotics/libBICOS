@@ -30,6 +30,41 @@ $ meson install -C builddir
 
 The versioning scheme of the library is [Semantic Versioning](https://semver.org/).
 
+## Usage
+
+### Linking
+After installing, you can include `/usr/local/include/BICOS/*` and link against `/usr/local/lib/libBICOS.so`.
+
+### Commandline-interface
+Alternatively, this project builds `bicos-cli`. To give you a feel for the parameters of BICOS, there is an example dataset provided in [data](/data);
+Calling:
+```console
+$ bicos-cli data/{left,right} -q data/Q.cvstore --threshold 0.98 --stacksize 12 --variance 2.5 --step 0.1 -o /tmp/result.png
+```
+will get you:
+
+<details>
+<summary>Disparity</summary>
+
+![Example disparity](/example-disp.png)
+</details>
+
+<details>
+<summary>Pointcloud</summary>
+
+![Example pointcloud](/example-pcl.png)
+</details>
+
+While only requiring ~70ms (RTX4090) and ~1.5GB VRAM for matching on two stacks of 12 images each.
+
+The most significant parameters can be summarized:
+
+- `--threshold`: increasing this reduces match-outliers. High values rely on a reliable pattern.
+- `--variance`: high values reduce coarse outliers, e.g. pixels where no pattern was projected. May reduce correct matches on low pattern contrast.
+- `--step`: optional value for subpixel-interpolation around matches.
+
+Other settings are available; Try `bicos-cli -h` for details.
+
 ## Benchmarking:
 
 ```console
