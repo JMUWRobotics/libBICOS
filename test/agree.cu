@@ -75,6 +75,7 @@ int main(void) {
     randdisp_dev.upload(randdisp);
 
     double thresh = randreal(-0.9, 0.9);
+    double minvar = randreal(0.0, 75.0);
 
     cv::cuda::GpuMat devout(randsize, cv::DataType<disparity_t>::type);
     devout.setTo(INVALID_DISP);
@@ -82,17 +83,17 @@ int main(void) {
 
 #if TEST_SUBPIXEL
 
-    block = cuda::max_blocksize(cuda::agree_subpixel_kernel<INPUT_TYPE, double, cuda::nxcorrd>);
+    block = cuda::max_blocksize(cuda::agree_subpixel_kernel<INPUT_TYPE, double, true, cuda::nxcorrd<true>>);
     grid = create_grid(block, randsize);
 
     float step = 0.25f;
 
-    cuda::agree_subpixel_kernel<INPUT_TYPE, double, cuda::nxcorrd>
-        <<<grid, block>>>(randdisp_dev, devptr, n, thresh, step, devout);
+    cuda::agree_subpixel_kernel<INPUT_TYPE, double, true, cuda::nxcorrd<true>>
+        <<<grid, block>>>(randdisp_dev, devptr, n, thresh, step, minvar, devout);
 
     assertCudaSuccess(cudaGetLastError());
 
-    cpu::agree_subpixel<INPUT_TYPE>(randdisp, hinput_l, hinput_r, n, thresh, step, hostout);
+    cpu::agree_subpixel<INPUT_TYPE>(randdisp, hinput_l, hinput_r, n, thresh, step, minvar, hostout);
 
     assertCudaSuccess(cudaDeviceSynchronize());
 
@@ -111,14 +112,14 @@ int main(void) {
 
 #else
 
-    block = cuda::max_blocksize(cuda::agree_kernel<INPUT_TYPE, double, cuda::nxcorrd>);
+    block = cuda::max_blocksize(cuda::agree_kernel<INPUT_TYPE, double, true, cuda::nxcorrd<true>>);
     grid = create_grid(block, randsize);
 
-    cuda::agree_kernel<INPUT_TYPE, double, cuda::nxcorrd><<<grid, block>>>(randdisp_dev, devptr, n, thresh, devout);
+    cuda::agree_kernel<INPUT_TYPE, double, true, cuda::nxcorrd<true>><<<grid, block>>>(randdisp_dev, devptr, n, thresh, minvar, devout);
 
     assertCudaSuccess(cudaGetLastError());
 
-    cpu::agree<INPUT_TYPE>(randdisp, hinput_l, hinput_r, n, thresh, hostout);
+    cpu::agree<INPUT_TYPE>(randdisp, hinput_l, hinput_r, n, thresh, minvar, hostout);
 
     assertCudaSuccess(cudaDeviceSynchronize());
 

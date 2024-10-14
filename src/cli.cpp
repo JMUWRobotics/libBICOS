@@ -51,8 +51,9 @@ int main(int argc, char const* const* argv) {
     opts.add_options()
         ("folder0", "First folder containing input images with numbered names", cxxopts::value<std::string>())
         ("folder1", "Optional second folder with input images. If specified, file names need to be 0.png, 1.png... Else, folder0 needs to contain 0_left.png, 0_right.png, 1_left.png...", cxxopts::value<std::string>())
-        ("t,threshold", "Normalized cross corellation threshold", cxxopts::value<double>()->default_value("0.5"))
+        ("t,threshold", "Normalized cross corellation threshold", cxxopts::value<double>()->default_value("0.75"))
         ("s,step", "Subpixel step (optional)", cxxopts::value<float>())
+        ("v,variance", "Minimum intensity variance", cxxopts::value<double>()->default_value("1.0"))
         ("limited", "Limit transformation mode. Allows for more images to be used.")
         ("o,outfile", "Output file for disparity image", cxxopts::value<std::string>()->default_value("bicosdisp.png"))
         ("n,stacksize", "Number of images to process. Defaults to all.", cxxopts::value<uint>())
@@ -124,6 +125,9 @@ int main(int argc, char const* const* argv) {
         c.subpixel_step = args["step"].as<float>();
     if (args.count("limited"))
         c.mode = TransformMode::LIMITED;
+    if (args.count("variance"))
+        if (double minvar = args["variance"].as<double>(); minvar > 0.0)
+            c.min_variance = minvar;
 #ifdef BICOS_CUDA
     if (args.count("single"))
         c.precision = Precision::SINGLE;

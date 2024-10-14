@@ -15,7 +15,7 @@
 ##  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ##
 
-project('libBICOS', 'cpp', version: '1.1.0-devel', license: 'LGPL-3.0-or-later')
+project('libBICOS', 'cpp', version: '1.1.0-devel', license: 'LGPL-3.0-or-later', license_files: ['COPYING', 'COPYING.LESSER'], meson_version: '>=1.1.0')
 
 pkg = import('pkgconfig', required: false)
 
@@ -181,7 +181,8 @@ if googlebench.found()
     sourceroot = meson.project_source_root()
     deps += googlebench
     if impl == 'cuda'
-        available_gpus = run_command('nvidia-smi', '--query-gpu=gpu_name', '--format=csv,noheader', check: true).stdout().strip()
+        available_gpus = ''
+      #available_gpus = run_command('nvidia-smi', '--query-gpu=gpu_name', '--format=csv,noheader', check: true).stdout().strip()
 
         benchmark('cuda',
             executable('bench_cuda',
