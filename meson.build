@@ -20,12 +20,9 @@ project('libBICOS', 'cpp', version: '1.1.0-devel', license: 'LGPL-3.0-or-later',
 pkg = import('pkgconfig', required: false)
 
 impl = get_option('implementation')
-cudaarch = get_option('cuda-arch')
 srcs = files('src/lib.cpp')
 incls = include_directories('include')
 deps = [dependency('opencv4')]
-
-cuda_module = import('unstable-cuda', required: impl == 'cuda' and cudaarch != 'Common')
 
 is_debug = get_option('buildtype') in ['debug', 'debugoptimized']
 if is_debug
@@ -36,13 +33,25 @@ endif
 add_project_arguments('-Wno-deprecated-enum-enum-conversion', language: 'cpp')
 add_project_arguments('-Xcompiler=-Wno-deprecated-enum-enum-conversion', language: 'cuda')
 
+cuda_arch_args = []
+
 if impl == 'cpu'
     add_project_arguments('-DBICOS_CPU', language: 'cpp')
     srcs += files('src/impl/cpu.cpp')
 elif impl == 'cuda'
-    add_languages('cuda')
+    add_languages('cuda', native: false)
     add_project_arguments('-DBICOS_CUDA', language: ['cpp', 'cuda'])
     srcs += files('src/impl/cuda.cu')
+
+    cuda_arch = get_option('cuda-arch')
+    cuda_ver = meson.get_compiler('cuda').version()
+    cuda_module = import('unstable-cuda', required: cuda_arch != 'Common')
+    
+    message('Building for cuda ' + cuda_ver + ' ' + ' '.join(cuda_module.nvcc_arch_readable(cuda_ver, cuda_arch)))
+    add_project_arguments(cuda_module.nvcc_arch_flags(cuda_ver, cuda_arch), language: 'cuda')
+    if cuda_arch == 'Ampere'
+        add_project_arguments('-DBICOS_CUDA_BF16=1', language: ['cpp', 'cuda'])
+    endif
 else
     error('unsupported implementation')
 endif
@@ -53,7 +62,7 @@ libs = both_libraries(
     include_directories: incls,
     dependencies: deps,
     install: true,
-    override_options: ['cpp_std=c++20'],
+    override_options: ['cpp_std=c++20']
 )
 
 cxxopts = dependency('cxxopts', required: false, not_found_message: 'library cxxopts not found, skipping CLI build')
@@ -146,7 +155,7 @@ if impl == 'cuda'
                 sources: srcs + 'test/integration.cu',
                 dependencies: deps,
                 include_directories: incls,
-                cuda_args: '-DBICOS_CUDA',
+                cuda_args: ['-DBICOS_CUDA'],
                 cpp_args: '-DBICOS_CPU',
                 override_options: ['cpp_std=c++20', 'cuda_std=c++20'],
             ),
@@ -160,7 +169,7 @@ if impl == 'cuda'
             sources: srcs + 'test/integration_raw.cu',
             dependencies: deps,
             include_directories: incls,
-            cuda_args: '-DBICOS_CUDA',
+            cuda_args: ['-DBICOS_CUDA'],
             cpp_args: '-DBICOS_CPU',
             override_options: ['cpp_std=c++20', 'cuda_std=c++20'],
         ),
@@ -181,19 +190,20 @@ if googlebench.found()
     sourceroot = meson.project_source_root()
     deps += googlebench
     if impl == 'cuda'
-        available_gpus = ''
-      #available_gpus = run_command('nvidia-smi', '--query-gpu=gpu_name', '--format=csv,noheader', check: true).stdout().strip()
-
-        benchmark('cuda',
+        nvidia_smi = find_program('nvidia-smi', required: false)
+        if nvidia_smi.found()
+            available_gpus = run_command(nvidia_smi, '--query-gpu=gpu_name', '--format=csv,noheader', check: true).stdout().strip()
+            benchmark('cuda',
             executable('bench_cuda',
                 sources: srcs + 'bench/cuda.cu',
                 dependencies: deps,
                 include_directories: incls,
-                cuda_args: f'-DSOURCE_ROOT="@sourceroot@"',
+                cuda_args: [f'-DSOURCE_ROOT="@sourceroot@"'],
                 override_options: ['cpp_std=c++20', 'cuda_std=c++20']
             ),
             args: [f'--benchmark_context=available_gpus=@available_gpus@']
         )
+        endif
     endif
 endif
 
@@ -205,6 +215,7 @@ configure_file(
         'BICOS_VERSION': f'"@project_version@"',
         'BICOS_CPU': impl == 'cpu',
         'BICOS_CUDA': impl == 'cuda',
+        'BICOS_CUDA_BF16': impl == 'cuda' and cuda_arch == 'Ampere'
     },
     install: true,
     install_dir: 'include/BICOS',
