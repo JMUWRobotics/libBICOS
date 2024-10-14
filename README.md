@@ -8,7 +8,7 @@ Dependencies:
 
 - `gcc` or equivalent C compiler with C++20 support (build)
 - [`meson`](https://github.com/mesonbuild/meson) >= 1.1.0 (build)
-- `opencv 4.x`
+- `opencv 4.x` with cuda support
 - `cuda 12.x` including toolkit 
 - [`cxxopts`](https://github.com/jarro2783/cxxopts) (optional, for cli)
 - [`benchmark`](https://github.com/google/benchmark) (optional, for executing benchmarks)
@@ -36,7 +36,7 @@ The versioning scheme of the library is [Semantic Versioning](https://semver.org
 After installing, you can include `/usr/local/include/BICOS/*` and link against `/usr/local/lib/libBICOS.so`.
 
 ### Commandline-interface
-Alternatively, this project builds `bicos-cli`. To give you a feel for the parameters of BICOS, there is an example dataset provided in [data](/data);
+Alternatively, this project builds `bicos-cli`. To give you a feel for the parameters of BICOS, there is an example dataset provided in [data](/data) with rectified imagery from a stereo camera, where images per side only differ in the projected light pattern.
 Calling:
 ```console
 $ bicos-cli data/{left,right} -q data/Q.cvstore --threshold 0.98 --stacksize 12 --variance 2.5 --step 0.1 -o /tmp/result.png
@@ -46,7 +46,7 @@ will get you:
 #### Disparity
 ![Example disparity](/example-disp.png)
 
-#### Pointcloud:
+#### Pointcloud
 ![Example pointcloud](/example-pcl.png)
 
 While only requiring ~70ms (RTX4090) and ~1.5GB VRAM for matching on two stacks of 12 images each.
@@ -64,6 +64,9 @@ Other settings are available; Try `bicos-cli -h` for details.
 ```console
 $ meson test --benchmark -C builddir --interactive
 ```
+
+## Light projection:
+For starters, you may find https://github.com/Sir-Photch/VRRTest useful for projecting a light pattern using an aftermarket projector.
 
 ## License
 
