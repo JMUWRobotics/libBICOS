@@ -136,29 +136,29 @@ static void match_impl(
         case Precision::SINGLE:
             if (subpixel_step.has_value()) {
                 if (_min_var.has_value()) {
-                    block = max_blocksize(agree_subpixel_kernel<TInput, float, true, nxcorrf<true>>);
+                    block = max_blocksize(agree_subpixel_kernel<TInput, float, nxcorrf<true>>);
                     grid = create_grid(block, sz);
-                    agree_subpixel_kernel<TInput, float, true, nxcorrf<true>>
+                    agree_subpixel_kernel<TInput, float, nxcorrf<true>>
                         <<<grid, block, 0, mainstream>>>(
                             bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), min_var, out);
                 } else {
-                    block = max_blocksize(agree_subpixel_kernel<TInput, float, false, nxcorrf<false>>);
+                    block = max_blocksize(agree_subpixel_kernel<TInput, float, nxcorrf<false>>);
                     grid = create_grid(block, sz);
-                    agree_subpixel_kernel<TInput, float, false, nxcorrf<false>>
+                    agree_subpixel_kernel<TInput, float, nxcorrf<false>>
                         <<<grid, block, 0, mainstream>>>(
                             bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), min_var, out);
                 }
             } else {
                 if (_min_var.has_value()) {
-                    block = max_blocksize(agree_kernel<TInput, float, true, nxcorrf<true>>);
+                    block = max_blocksize(agree_kernel<TInput, float, nxcorrf<true>>);
                     grid = create_grid(block, sz);
-                    agree_kernel<TInput, float, true, nxcorrf<true>>
+                    agree_kernel<TInput, float, nxcorrf<true>>
                         <<<grid, block, 0, mainstream>>>(
                             bicos_disp, ptrs_dev, n_images, nxcorr_threshold, min_var, out);
                 } else {
-                    block = max_blocksize(agree_kernel<TInput, float, false, nxcorrf<false>>);
+                    block = max_blocksize(agree_kernel<TInput, float, nxcorrf<false>>);
                     grid = create_grid(block, sz);
-                    agree_kernel<TInput, float, false, nxcorrf<false>>
+                    agree_kernel<TInput, float, nxcorrf<false>>
                         <<<grid, block, 0, mainstream>>>(
                             bicos_disp, ptrs_dev, n_images, nxcorr_threshold, min_var, out);
                 }
@@ -166,29 +166,29 @@ static void match_impl(
         case Precision::DOUBLE:
             if (subpixel_step.has_value()) {
                 if (_min_var.has_value()) {
-                    block = max_blocksize(agree_subpixel_kernel<TInput, double, true, nxcorrd<true>>);
+                    block = max_blocksize(agree_subpixel_kernel<TInput, double, nxcorrd<true>>);
                     grid = create_grid(block, sz);
-                    agree_subpixel_kernel<TInput, double, true, nxcorrd<true>>
+                    agree_subpixel_kernel<TInput, double, nxcorrd<true>>
                         <<<grid, block, 0, mainstream>>>(
                             bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), min_var, out);
                 } else {
-                    block = max_blocksize(agree_subpixel_kernel<TInput, double, false, nxcorrd<false>>);
+                    block = max_blocksize(agree_subpixel_kernel<TInput, double, nxcorrd<false>>);
                     grid = create_grid(block, sz);
-                    agree_subpixel_kernel<TInput, double, false, nxcorrd<false>>
+                    agree_subpixel_kernel<TInput, double, nxcorrd<false>>
                         <<<grid, block, 0, mainstream>>>(
                             bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), min_var, out);
                 }
             } else {
                 if (_min_var.has_value()) {
-                    block = max_blocksize(agree_kernel<TInput, double, true, nxcorrd<true>>);
+                    block = max_blocksize(agree_kernel<TInput, double, nxcorrd<true>>);
                     grid = create_grid(block, sz);
-                    agree_kernel<TInput, double, true, nxcorrd<true>>
+                    agree_kernel<TInput, double, nxcorrd<true>>
                         <<<grid, block, 0, mainstream>>>(
                             bicos_disp, ptrs_dev, n_images, nxcorr_threshold, min_var, out);
                 } else {
-                    block = max_blocksize(agree_kernel<TInput, double, false, nxcorrd<false>>);
+                    block = max_blocksize(agree_kernel<TInput, double, nxcorrd<false>>);
                     grid = create_grid(block, sz);
-                    agree_kernel<TInput, double, false, nxcorrd<false>>
+                    agree_kernel<TInput, double, nxcorrd<false>>
                         <<<grid, block, 0, mainstream>>>(
                             bicos_disp, ptrs_dev, n_images, nxcorr_threshold, min_var, out);
                 }

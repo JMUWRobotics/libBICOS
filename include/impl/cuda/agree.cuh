@@ -26,7 +26,7 @@
 
 namespace BICOS::impl::cuda {
 
-template<bool MINVAR, typename T, typename V>
+template<typename T, typename V>
 using corrfun = V (*)(const T*, const T*, size_t, V);
 
 template<bool MINVAR, typename T>
@@ -83,6 +83,8 @@ __device__ __forceinline__ float nxcorrf(const T* pix0, const T* pix1, size_t n,
     return covar * rsqrtf(var0 * var1);
 }
 
+#if BICOS_CUDA_BF16
+
 template<bool MINVAR, typename T>
 __device__ __forceinline__ __nv_bfloat16 nxcorrbf(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] __nv_bfloat16 minvar) {
     __nv_bfloat162 mean(CUDART_ZERO_BF16, CUDART_ZERO_BF16);
@@ -108,7 +110,9 @@ __device__ __forceinline__ __nv_bfloat16 nxcorrbf(const T* pix0, const T* pix1, 
     return covar * hrsqrt(var.x * var.y);
 }
 
-template<typename TInput, typename TPrecision, bool MINVAR, corrfun<MINVAR, TInput, TPrecision> FCorr>
+#endif
+
+template<typename TInput, typename TPrecision, corrfun<TInput, TPrecision> FCorr>
 __global__ void agree_kernel(
     const cv::cuda::PtrStepSz<int16_t> raw_disp,
     const cv::cuda::PtrStepSz<TInput>* stacks,
@@ -156,7 +160,7 @@ __global__ void agree_kernel(
     out(row, col) = d;
 }
 
-template<typename TInput, typename TPrecision, bool MINVAR, corrfun<MINVAR, TInput, TPrecision> FCorr>
+template<typename TInput, typename TPrecision, corrfun<TInput, TPrecision> FCorr>
 __global__ void agree_subpixel_kernel(
     const cv::cuda::PtrStepSz<int16_t> raw_disp,
     const cv::cuda::PtrStepSz<TInput>* stacks,
@@ -244,7 +248,7 @@ __global__ void agree_subpixel_kernel(
     }
 }
 
-template<typename TInput, typename TPrecision, bool MINVAR, corrfun<MINVAR, TInput, TPrecision> FCorr>
+template<typename TInput, typename TPrecision, corrfun<TInput, TPrecision> FCorr>
 __global__ void agree_subpixel_kernel_smem(
     const cv::cuda::PtrStepSz<int16_t> raw_disp,
     const cv::cuda::PtrStepSz<TInput>* stacks,
