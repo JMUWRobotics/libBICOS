@@ -42,17 +42,15 @@ constexpr double minvar = 10.0;
 constexpr float step = 0.25;
 static const cv::Size size(3300, 2200);
 
-template<typename TPrecision, cuda::corrfun<false, uint8_t, TPrecision> FCorr>
-__global__ void nxcorr_kernel(const uint8_t* a, const uint8_t* b, size_t n, TPrecision* out) {
-    *out = FCorr(a, b, n, 0.0);
+template<typename TPrecision, cuda::NXCVariant VARIANT>
+__global__ void nxcorr_kernel(const uint8_t* a, const uint8_t* b, size_t n, TPrecision* out, TPrecision minvar) {
+    if constexpr (std::is_same_v<TPrecision, float>)
+        *out = cuda::nxcorrf<VARIANT>(a, b, n, minvar);
+    else
+        *out = cuda::nxcorrd<VARIANT>(a, b, n, minvar);
 }
 
-template<typename TPrecision, cuda::corrfun<true, uint8_t, TPrecision> FCorr>
-__global__ void nxcorr_minvar_kernel(const uint8_t* a, const uint8_t* b, size_t n, TPrecision minvar, TPrecision* out) {
-    *out = FCorr(a, b, n, minvar);
-}
-
-template<typename TPrecision, cuda::corrfun<false, uint8_t, TPrecision> FCorr>
+template<typename TPrecision, cuda::NXCVariant VARIANT>
 void bench_nxcorr_subroutine(benchmark::State& state) {
     uint8_t _a[50], _b[50], *a, *b;
     TPrecision minvar = 100;
@@ -72,32 +70,7 @@ void bench_nxcorr_subroutine(benchmark::State& state) {
     cudaMalloc(&out, 1);
 
     for (auto _: state) {
-        nxcorr_kernel<TPrecision, FCorr><<<1, 1>>>(a, b, sizeof(_a), out);
-        cudaDeviceSynchronize();
-    }
-}
-
-template<typename TPrecision, cuda::corrfun<true, uint8_t, TPrecision> FCorr>
-void bench_nxcorr_minvar_subroutine(benchmark::State& state) {
-    uint8_t _a[50], _b[50], *a, *b;
-    TPrecision minvar = 100;
-
-    for (size_t i = 0; i < sizeof(_a); ++i) {
-        _a[i] = rand();
-        _b[i] = rand();
-    }
-
-    cudaMalloc(&a, sizeof(_a));
-    cudaMalloc(&b, sizeof(_b));
-
-    cudaMemcpy(a, _a, sizeof(_a), cudaMemcpyHostToDevice);
-    cudaMemcpy(b, _b, sizeof(_b), cudaMemcpyHostToDevice);
-
-    TPrecision* out;
-    cudaMalloc(&out, 1);
-
-    for (auto _: state) {
-        nxcorr_minvar_kernel<TPrecision, FCorr><<<1, 1>>>(a, b, sizeof(_a), minvar, out);
+        nxcorr_kernel<TPrecision, VARIANT><<<1, 1>>>(a, b, sizeof(_a), out, minvar);
         cudaDeviceSynchronize();
     }
 }
@@ -128,12 +101,12 @@ void bench_agree_kernel(benchmark::State& state) {
 
     cv::cuda::GpuMat out(size, cv::DataType<disparity_t>::type);
 
-    const dim3 block = cuda::max_blocksize(cuda::agree_kernel<TInput, double, true, cuda::nxcorrd<true>>);
+    const dim3 block = cuda::max_blocksize(cuda::agree_kernel<TInput, double, cuda::NXCVariant::MINVAR>);
     const dim3 grid = create_grid(block, size);
 
     for (auto _: state) {
-        cuda::agree_kernel<TInput, double, true, cuda::nxcorrd<true>>
-            <<<grid, block>>>(randdisp_dev, devptr, n, thresh, minvar, out);
+        cuda::agree_kernel<TInput, double, cuda::NXCVariant::MINVAR>
+            <<<grid, block>>>(randdisp_dev, devptr, n, thresh, 0.0, minvar, out);
         cudaDeviceSynchronize();
     }
 
@@ -166,11 +139,11 @@ void bench_agree_subpixel_kernel(benchmark::State& state) {
 
     cv::cuda::GpuMat out(size, cv::DataType<disparity_t>::type);
 
-    const dim3 block = cuda::max_blocksize(cuda::agree_subpixel_kernel<TInput, double, true, cuda::nxcorrd<true>>);
+    const dim3 block = cuda::max_blocksize(cuda::agree_subpixel_kernel<TInput, double, cuda::NXCVariant::MINVAR>);
     const dim3 grid = create_grid(block, size);
 
     for (auto _: state) {
-        cuda::agree_subpixel_kernel<TInput, double, true, cuda::nxcorrd<true>>
+        cuda::agree_subpixel_kernel<TInput, double, cuda::NXCVariant::MINVAR>
             <<<grid, block>>>(randdisp_dev, devptr, n, thresh, step, minvar, out);
         cudaDeviceSynchronize();
     }
@@ -207,16 +180,16 @@ void bench_agree_subpixel_kernel_smem(benchmark::State& state) {
     size_t smem_size = size.width * n * sizeof(TInput);
 
     assertCudaSuccess(cudaFuncSetAttribute(
-        cuda::agree_subpixel_kernel_smem<TInput, double, true, cuda::nxcorrd<true>>,
+        cuda::agree_subpixel_kernel_smem<TInput, double, cuda::NXCVariant::MINVAR>,
         cudaFuncAttributeMaxDynamicSharedMemorySize,
         smem_size
     ));
 
-    const dim3 block = cuda::max_blocksize(cuda::agree_subpixel_kernel_smem<TInput, double, true, cuda::nxcorrd<true>>, smem_size);
+    const dim3 block = cuda::max_blocksize(cuda::agree_subpixel_kernel_smem<TInput, double, cuda::NXCVariant::MINVAR>, smem_size);
     const dim3 grid = create_grid(block, size);
 
     for (auto _: state) {
-        cuda::agree_subpixel_kernel_smem<TInput, double, true, cuda::nxcorrd<true>>
+        cuda::agree_subpixel_kernel_smem<TInput, double, cuda::NXCVariant::MINVAR>
             <<<grid, block, smem_size>>>(randdisp_dev, devptr, n, thresh, step, minvar, out);
         cudaDeviceSynchronize();
     }
@@ -336,26 +309,18 @@ void bench_integration(benchmark::State& state) {
     }
 }
 
-BENCHMARK(bench_nxcorr_subroutine<float, cuda::nxcorrf<false>>)
+BENCHMARK(bench_nxcorr_subroutine<float, cuda::NXCVariant::MINVAR>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
-BENCHMARK(bench_nxcorr_minvar_subroutine<float, cuda::nxcorrf<true>>)
+BENCHMARK(bench_nxcorr_subroutine<float, cuda::NXCVariant::PLAIN>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
-BENCHMARK(bench_nxcorr_subroutine<double, cuda::nxcorrd<false>>)
+BENCHMARK(bench_nxcorr_subroutine<double, cuda::NXCVariant::MINVAR>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
-BENCHMARK(bench_nxcorr_minvar_subroutine<double, cuda::nxcorrd<true>>)
+BENCHMARK(bench_nxcorr_subroutine<double, cuda::NXCVariant::PLAIN>)
     ->Repetitions(10)
     ->ReportAggregatesOnly(true);
-/*
-BENCHMARK(bench_nxcorr_subroutine<__nv_bfloat16, false, cuda::nxcorrbf<false>>)
-    ->Repetitions(10)
-    ->ReportAggregatesOnly(true);
-BENCHMARK(bench_nxcorr_subroutine<__nv_bfloat16, true, cuda::nxcorrbf<true>>)
-    ->Repetitions(10)
-    ->ReportAggregatesOnly(true);
-*/
 
 
 BENCHMARK(bench_agree_kernel<uint8_t>);

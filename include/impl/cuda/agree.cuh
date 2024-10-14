@@ -26,10 +26,14 @@
 
 namespace BICOS::impl::cuda {
 
-template<bool MINVAR, typename T, typename V>
+enum class NXCVariant {
+    PLAIN, MINVAR
+};
+
+template<typename T, typename V>
 using corrfun = V (*)(const T*, const T*, size_t, V);
 
-template<bool MINVAR, typename T>
+template<NXCVariant VARIANT, typename T>
 __device__ __forceinline__ double nxcorrd(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] double minvar) {
     double mean0 = 0.0, mean1 = 0.0;
     for (size_t i = 0; i < n; ++i) {
@@ -49,14 +53,14 @@ __device__ __forceinline__ double nxcorrd(const T* pix0, const T* pix1, size_t n
         var1 = __fma_rn(diff1, diff1, var1);
     }
 
-    if constexpr (MINVAR)
+    if constexpr (NXCVariant::MINVAR == VARIANT)
         if (var0 < minvar || var1 < minvar)
             return -1.0;
 
     return covar * rsqrt(var0 * var1);
 }
 
-template<bool MINVAR, typename T>
+template<NXCVariant VARIANT, typename T>
 __device__ __forceinline__ float nxcorrf(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] float minvar) {
     float mean0 = 0.0f, mean1 = 0.0f;
     for (size_t i = 0; i < n; ++i) {
@@ -76,44 +80,31 @@ __device__ __forceinline__ float nxcorrf(const T* pix0, const T* pix1, size_t n,
         var1 = __fmaf_rn(diff1, diff1, var1);
     }
 
-    if constexpr (MINVAR)
+    if constexpr (NXCVariant::MINVAR == VARIANT)
         if (var0 < minvar || var1 < minvar)
             return -1.0f;
 
     return covar * rsqrtf(var0 * var1);
 }
 
-template<bool MINVAR, typename T>
-__device__ __forceinline__ __nv_bfloat16 nxcorrbf(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] __nv_bfloat16 minvar) {
-    __nv_bfloat162 mean(CUDART_ZERO_BF16, CUDART_ZERO_BF16);
-    for (size_t i = 0; i < n; ++i)
-        mean = __hadd2_rn(mean, __nv_bfloat162(pix0[i], pix1[i]));
+template<typename TInput, typename TPrecision>
+using agree_kernel_t = void (*)(
+    const cv::cuda::PtrStepSz<int16_t>,
+    const cv::cuda::PtrStepSz<TInput>*,
+    size_t,
+    TPrecision,
+    float,
+    TPrecision,
+    cv::cuda::PtrStepSz<disparity_t>
+);
 
-    mean /= __nv_bfloat162(n, n);
-
-    __nv_bfloat162 var(CUDART_ZERO_BF16, CUDART_ZERO_BF16);
-    __nv_bfloat16  covar = CUDART_ZERO_BF16;
-
-    for (size_t i = 0; i < n; ++i) {
-        __nv_bfloat162 diff = __nv_bfloat162(pix0[i], pix1[i]) - mean;
-
-        covar = __hfma(diff.x, diff.y, covar);
-        var = __hfma2(diff, diff, var);
-    }
-
-    if constexpr (MINVAR)
-        if (var.x < minvar || var.y < minvar)
-            return -CUDART_ONE_BF16;
-
-    return covar * hrsqrt(var.x * var.y);
-}
-
-template<typename TInput, typename TPrecision, bool MINVAR, corrfun<MINVAR, TInput, TPrecision> FCorr>
+template<typename TInput, typename TPrecision, NXCVariant VARIANT>
 __global__ void agree_kernel(
     const cv::cuda::PtrStepSz<int16_t> raw_disp,
     const cv::cuda::PtrStepSz<TInput>* stacks,
     size_t n,
     TPrecision nxcorr_threshold,
+    [[maybe_unused]] float,
     TPrecision min_var,
     cv::cuda::PtrStepSz<disparity_t> out
 ) {
@@ -148,7 +139,11 @@ __global__ void agree_kernel(
 #endif
     }
 
-    TPrecision nxc = FCorr(pix0, pix1, n, min_var);
+    TPrecision nxc;
+    if constexpr (std::is_same_v<TPrecision, float>)
+        nxc = nxcorrf<VARIANT>(pix0, pix1, n, min_var);
+    else
+        nxc = nxcorrd<VARIANT>(pix0, pix1, n, min_var);
 
     if (nxc < nxcorr_threshold)
         return;
@@ -156,7 +151,7 @@ __global__ void agree_kernel(
     out(row, col) = d;
 }
 
-template<typename TInput, typename TPrecision, bool MINVAR, corrfun<MINVAR, TInput, TPrecision> FCorr>
+template<typename TInput, typename TPrecision, NXCVariant VARIANT>
 __global__ void agree_subpixel_kernel(
     const cv::cuda::PtrStepSz<int16_t> raw_disp,
     const cv::cuda::PtrStepSz<TInput>* stacks,
@@ -197,8 +192,13 @@ __global__ void agree_subpixel_kernel(
 #endif
     }
 
+    TPrecision nxc;
+
     if (col1 == 0 || col1 == out.cols - 1) {
-        TPrecision nxc = FCorr(pix0, pix1, n, min_var);
+        if constexpr (std::is_same_v<TPrecision, float>)
+            nxc = nxcorrf<VARIANT>(pix0, pix1, n, min_var);
+        else
+            nxc = nxcorrd<VARIANT>(pix0, pix1, n, min_var);
 
         if (nxc < nxcorr_threshold)
             return;
@@ -227,7 +227,10 @@ __global__ void agree_subpixel_kernel(
             for (size_t t = 0; t < n; ++t)
                 interp[t] = (TInput)__float2int_rn(a[t] * x * x + b[t] * x + c[t]);
 
-            TPrecision nxc = FCorr(pix0, interp, n, min_var);
+            if constexpr (std::is_same_v<TPrecision, float>)
+                nxc = nxcorrf<VARIANT>(pix0, interp, n, min_var);
+            else
+                nxc = nxcorrd<VARIANT>(pix0, interp, n, min_var);
 
             if (best_nxcorr < nxc) {
                 best_x = x;
@@ -244,7 +247,7 @@ __global__ void agree_subpixel_kernel(
     }
 }
 
-template<typename TInput, typename TPrecision, bool MINVAR, corrfun<MINVAR, TInput, TPrecision> FCorr>
+template<typename TInput, typename TPrecision, NXCVariant VARIANT>
 __global__ void agree_subpixel_kernel_smem(
     const cv::cuda::PtrStepSz<int16_t> raw_disp,
     const cv::cuda::PtrStepSz<TInput>* stacks,
@@ -294,8 +297,13 @@ __global__ void agree_subpixel_kernel_smem(
 #endif
     }
 
+    TPrecision nxc;
+
     if (col1 == 0 || col1 == out.cols - 1) {
-        TPrecision nxc = FCorr(pix0, row1 + n * col1, n, min_var);
+        if constexpr (std::is_same_v<TPrecision, float>)
+            nxc = nxcorrf<VARIANT>(pix0, row1 + n * col1, n, min_var);
+        else
+            nxc = nxcorrd<VARIANT>(pix0, row1 + n * col1, n, min_var);
 
         if (nxc < nxcorr_threshold)
             return;
@@ -324,7 +332,10 @@ __global__ void agree_subpixel_kernel_smem(
             for (size_t t = 0; t < n; ++t)
                 interp[t] = (TInput)__float2int_rn(a[t] * x * x + b[t] * x + c[t]);
 
-            TPrecision nxc = FCorr(pix0, interp, n, min_var);
+            if constexpr (std::is_same_v<TPrecision, float>)
+                nxc = nxcorrf<VARIANT>(pix0, interp, n, min_var);
+            else
+                nxc = nxcorrd<VARIANT>(pix0, interp, n, min_var);
 
             if (best_nxcorr < nxc) {
                 best_x = x;

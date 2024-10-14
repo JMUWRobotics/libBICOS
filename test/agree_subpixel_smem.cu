@@ -68,24 +68,26 @@ int main(void) {
 
     float step = 0.25f;
 
-    block = cuda::max_blocksize(cuda::agree_subpixel_kernel<INPUT_TYPE, double, true, cuda::nxcorrd<true>>);
+    auto kernel = cuda::agree_subpixel_kernel<INPUT_TYPE, double, cuda::NXCVariant::MINVAR>;
+
+    block = cuda::max_blocksize(kernel);
     grid = create_grid(block, randsize);
 
-    cuda::agree_subpixel_kernel<INPUT_TYPE, double, true, cuda::nxcorrd<true>>
-        <<<grid, block>>>(randdisp_dev, devptr, n, thresh, step, minvar, devout_gmem);
+    kernel<<<grid, block>>>(randdisp_dev, devptr, n, thresh, step, minvar, devout_gmem);
     assertCudaSuccess(cudaGetLastError());
 
+    kernel = cuda::agree_subpixel_kernel_smem<INPUT_TYPE, double, cuda::NXCVariant::MINVAR>;
+
     assertCudaSuccess(cudaFuncSetAttribute(
-        impl::cuda::agree_subpixel_kernel_smem<INPUT_TYPE, double, true, cuda::nxcorrd<true>>,
+        kernel,
         cudaFuncAttributeMaxDynamicSharedMemorySize,
         smem_size
     ));
 
-    block = cuda::max_blocksize(cuda::agree_subpixel_kernel_smem<INPUT_TYPE, double, true, cuda::nxcorrd<true>>, smem_size);
+    block = cuda::max_blocksize(kernel);
     grid = create_grid(block, randsize);
 
-    cuda::agree_subpixel_kernel_smem<INPUT_TYPE, double, true, cuda::nxcorrd<true>>
-        <<<grid, block, smem_size>>>(randdisp_dev, devptr, n, thresh, step, minvar, devout_smem);
+    kernel<<<grid, block, smem_size>>>(randdisp_dev, devptr, n, thresh, step, minvar, devout_smem);
     assertCudaSuccess(cudaGetLastError());
 
     cv::Mat_<disparity_t> gmem, smem;

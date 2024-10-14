@@ -83,13 +83,14 @@ int main(void) {
 
 #if TEST_SUBPIXEL
 
-    block = cuda::max_blocksize(cuda::agree_subpixel_kernel<INPUT_TYPE, double, true, cuda::nxcorrd<true>>);
+    auto kernel = cuda::agree_subpixel_kernel<INPUT_TYPE, double, cuda::NXCVariant::MINVAR>;
+
+    block = cuda::max_blocksize(kernel);
     grid = create_grid(block, randsize);
 
     float step = 0.25f;
 
-    cuda::agree_subpixel_kernel<INPUT_TYPE, double, true, cuda::nxcorrd<true>>
-        <<<grid, block>>>(randdisp_dev, devptr, n, thresh, step, minvar, devout);
+    kernel<<<grid, block>>>(randdisp_dev, devptr, n, thresh, step, minvar, devout);
 
     assertCudaSuccess(cudaGetLastError());
 
@@ -112,10 +113,12 @@ int main(void) {
 
 #else
 
-    block = cuda::max_blocksize(cuda::agree_kernel<INPUT_TYPE, double, true, cuda::nxcorrd<true>>);
+    auto kernel = cuda::agree_kernel<INPUT_TYPE, double, cuda::NXCVariant::MINVAR>;
+
+    block = cuda::max_blocksize(kernel);
     grid = create_grid(block, randsize);
 
-    cuda::agree_kernel<INPUT_TYPE, double, true, cuda::nxcorrd<true>><<<grid, block>>>(randdisp_dev, devptr, n, thresh, minvar, devout);
+    kernel<<<grid, block>>>(randdisp_dev, devptr, n, thresh, 0.0f, minvar, devout);
 
     assertCudaSuccess(cudaGetLastError());
 
