@@ -99,13 +99,38 @@ __device__ __forceinline__ __nv_bfloat16 nxcorrbf(const T* pix0, const T* pix1, 
     for (size_t i = 0; i < n; ++i) {
         __nv_bfloat162 diff = __nv_bfloat162(pix0[i], pix1[i]) - mean;
 
-        covar = __hfma(diff.x, diff.y, covar);
-        var = __hfma2(diff, diff, var);
+        covar += diff.x * diff.y;
+        var += diff * diff;
     }
 
     if constexpr (MINVAR)
         if (var.x < minvar || var.y < minvar)
             return -CUDART_ONE_BF16;
+
+    return covar * hrsqrt(var.x * var.y);
+}
+
+template<bool MINVAR, typename T>
+__device__ __forceinline__ __half nxcorrh(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] __half minvar) {
+    __half2 mean(CUDART_ZERO_FP16, CUDART_ZERO_FP16);
+    for (size_t i = 0; i < n; ++i)
+        mean = __hadd2_rn(mean, __half2(pix0[i], pix1[i]));
+
+    mean /= __half2(n, n);
+
+    __half2 var(CUDART_ZERO_FP16, CUDART_ZERO_FP16);
+    __half  covar = CUDART_ZERO_FP16;
+
+    for (size_t i = 0; i < n; ++i) {
+        __half2 diff = __half2(pix0[i], pix1[i]) - mean;
+
+        covar += diff.x * diff.y;
+        var += diff * diff;
+    }
+
+    if constexpr (MINVAR)
+        if (var.x < minvar || var.y < minvar)
+            return -CUDART_ONE_FP16;
 
     return covar * hrsqrt(var.x * var.y);
 }
