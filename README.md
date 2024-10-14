@@ -43,17 +43,11 @@ $ bicos-cli data/{left,right} -q data/Q.cvstore --threshold 0.98 --stacksize 12 
 ```
 will get you:
 
-<details>
-<summary>Disparity</summary>
-
+#### Disparity
 ![Example disparity](/example-disp.png)
-</details>
 
-<details>
-<summary>Pointcloud</summary>
-
+#### Pointcloud:
 ![Example pointcloud](/example-pcl.png)
-</details>
 
 While only requiring ~70ms (RTX4090) and ~1.5GB VRAM for matching on two stacks of 12 images each.
 
