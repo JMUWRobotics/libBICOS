@@ -41,7 +41,7 @@ static void match_impl(
     Precision precision,
     TransformMode mode,
     std::optional<float> subpixel_step,
-    std::optional<double> _min_var,
+    std::optional<double> min_var,
     cv::cuda::GpuMat& out,
     cv::cuda::Stream& _stream
 ) {
@@ -128,71 +128,39 @@ static void match_impl(
 
     // clang-format off
 
-    // TODO: switch to flags and LUT for function calls
-
-    double min_var = _min_var.value_or(1.0) * n_images;
-
     switch (precision) {
-        case Precision::SINGLE:
-            if (subpixel_step.has_value()) {
-                if (_min_var.has_value()) {
-                    block = max_blocksize(agree_subpixel_kernel<TInput, float, cuda::NXCVariant::MINVAR>);
-                    grid = create_grid(block, sz);
-                    agree_subpixel_kernel<TInput, float, cuda::NXCVariant::MINVAR>
-                        <<<grid, block, 0, mainstream>>>(
-                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), min_var, out);
-                } else {
-                    block = max_blocksize(agree_subpixel_kernel<TInput, float, cuda::NXCVariant::PLAIN>);
-                    grid = create_grid(block, sz);
-                    agree_subpixel_kernel<TInput, float, cuda::NXCVariant::PLAIN>
-                        <<<grid, block, 0, mainstream>>>(
-                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), min_var, out);
-                }
-            } else {
-                if (_min_var.has_value()) {
-                    block = max_blocksize(agree_kernel<TInput, float, cuda::NXCVariant::MINVAR>);
-                    grid = create_grid(block, sz);
-                    agree_kernel<TInput, float, cuda::NXCVariant::MINVAR>
-                        <<<grid, block, 0, mainstream>>>(
-                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, 0.0f, min_var, out);
-                } else {
-                    block = max_blocksize(agree_kernel<TInput, float, cuda::NXCVariant::PLAIN>);
-                    grid = create_grid(block, sz);
-                    agree_kernel<TInput, float, cuda::NXCVariant::PLAIN>
-                        <<<grid, block, 0, mainstream>>>(
-                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, 0.0f, min_var, out);
-                }
-            } break;
-        case Precision::DOUBLE:
-            if (subpixel_step.has_value()) {
-                if (_min_var.has_value()) {
-                    block = max_blocksize(agree_subpixel_kernel<TInput, double, cuda::NXCVariant::MINVAR>);
-                    grid = create_grid(block, sz);
-                    agree_subpixel_kernel<TInput, double, cuda::NXCVariant::MINVAR>
-                        <<<grid, block, 0, mainstream>>>(
-                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), min_var, out);
-                } else {
-                    block = max_blocksize(agree_subpixel_kernel<TInput, double, cuda::NXCVariant::PLAIN>);
-                    grid = create_grid(block, sz);
-                    agree_subpixel_kernel<TInput, double, cuda::NXCVariant::PLAIN>
-                        <<<grid, block, 0, mainstream>>>(
-                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value(), min_var, out);
-                }
-            } else {
-                if (_min_var.has_value()) {
-                    block = max_blocksize(agree_kernel<TInput, double, cuda::NXCVariant::MINVAR>);
-                    grid = create_grid(block, sz);
-                    agree_kernel<TInput, double, cuda::NXCVariant::MINVAR>
-                        <<<grid, block, 0, mainstream>>>(
-                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, 0.0f, min_var, out);
-                } else {
-                    block = max_blocksize(agree_kernel<TInput, double, cuda::NXCVariant::PLAIN>);
-                    grid = create_grid(block, sz);
-                    agree_kernel<TInput, double, cuda::NXCVariant::PLAIN>
-                        <<<grid, block, 0, mainstream>>>(
-                            bicos_disp, ptrs_dev, n_images, nxcorr_threshold, 0.0f, min_var, out);
-                }
-            } break;
+    case Precision::SINGLE: {
+
+        static agree_kernel_t<TInput, float> lut[2][2] = {
+            { agree_kernel<TInput, float, NXCVariant::PLAIN>, agree_kernel<TInput, float, NXCVariant::MINVAR> },
+            { agree_subpixel_kernel<TInput, float, NXCVariant::PLAIN>, agree_subpixel_kernel<TInput, float, NXCVariant::MINVAR> }
+        };
+
+        auto kernel = lut[subpixel_step.has_value()][min_var.has_value()];
+
+        block = max_blocksize(kernel);
+        grid = create_grid(block, sz);
+
+        kernel<<<grid, block, 0, mainstream>>>(
+        bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value_or(0.0f), min_var.value_or(0.0f), out);
+
+    } break;
+    case Precision::DOUBLE: {
+
+        static agree_kernel_t<TInput, double> lut[2][2] = {
+            { agree_kernel<TInput, double, NXCVariant::PLAIN>, agree_kernel<TInput, double, NXCVariant::MINVAR> },
+            { agree_subpixel_kernel<TInput, double, NXCVariant::PLAIN>, agree_subpixel_kernel<TInput, double, NXCVariant::MINVAR> }
+        };
+
+        auto kernel = lut[subpixel_step.has_value()][min_var.has_value()];
+
+        block = max_blocksize(kernel);
+        grid = create_grid(block, sz);
+
+        kernel<<<grid, block, 0, mainstream>>>(
+        bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value_or(0.0f), min_var.value_or(0.0), out);
+
+    } break;
     }
 
     // clang-format on
