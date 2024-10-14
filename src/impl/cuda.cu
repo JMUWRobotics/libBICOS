@@ -142,7 +142,7 @@ static void match_impl(
         grid = create_grid(block, sz);
 
         kernel<<<grid, block, 0, mainstream>>>(
-        bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value_or(0.0f), min_var.value_or(0.0f), out);
+        bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value_or(0.0f), n_images * min_var.value_or(0.0f), out);
 
     } break;
     case Precision::DOUBLE: {
@@ -158,7 +158,7 @@ static void match_impl(
         grid = create_grid(block, sz);
 
         kernel<<<grid, block, 0, mainstream>>>(
-        bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value_or(0.0f), min_var.value_or(0.0), out);
+        bicos_disp, ptrs_dev, n_images, nxcorr_threshold, subpixel_step.value_or(0.0f), n_images * min_var.value_or(0.0), out);
 
     } break;
     }
