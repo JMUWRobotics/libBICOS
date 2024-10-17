@@ -186,6 +186,7 @@ void bench_agree_subpixel_kernel_smem(benchmark::State& state) {
     );
 
     if (!smem_fits) {
+        cudaGetLastError();
         state.SkipWithMessage("smem too small");
         return;
     }
@@ -262,6 +263,7 @@ void bench_bicos_kernel_smem(benchmark::State& state) {
     );
 
     if (!smem_fits) {
+        cudaGetLastError();
         state.SkipWithMessage("smem too small");
         return;
     }
