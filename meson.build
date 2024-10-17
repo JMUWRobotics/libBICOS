@@ -190,8 +190,14 @@ if googlebench.found()
     sourceroot = meson.project_source_root()
     deps += googlebench
     if impl == 'cuda'
-        available_gpus = ''
-      #available_gpus = run_command('nvidia-smi', '--query-gpu=gpu_name', '--format=csv,noheader', check: true).stdout().strip()
+
+        nvidia_smi = find_program('nvidia-smi', required: false)
+        
+        if nvidia_smi.found()
+            available_gpus = run_command(nvidia_smi, '--query-gpu=gpu_name', '--format=csv,noheader', check: true).stdout().strip()
+        else
+            available_gpus = 'no-gpu-detected'
+        endif
 
         benchmark('cuda',
             executable('bench_cuda',
