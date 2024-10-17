@@ -179,11 +179,16 @@ void bench_agree_subpixel_kernel_smem(benchmark::State& state) {
 
     size_t smem_size = size.width * n * sizeof(TInput);
 
-    assertCudaSuccess(cudaFuncSetAttribute(
+    bool smem_fits = cudaSuccess == cudaFuncSetAttribute(
         cuda::agree_subpixel_kernel_smem<TInput, double, cuda::NXCVariant::MINVAR>,
         cudaFuncAttributeMaxDynamicSharedMemorySize,
         smem_size
-    ));
+    );
+
+    if (!smem_fits) {
+        state.SkipWithMessage("smem too small");
+        return;
+    }
 
     const dim3 block = cuda::max_blocksize(cuda::agree_subpixel_kernel_smem<TInput, double, cuda::NXCVariant::MINVAR>, smem_size);
     const dim3 grid = create_grid(block, size);
@@ -250,11 +255,16 @@ void bench_bicos_kernel_smem(benchmark::State& state) {
 
     size_t smem_size = size.width * sizeof(TDescriptor);
 
-    assertCudaSuccess(cudaFuncSetAttribute(
+    bool smem_fits = cudaSuccess == cudaFuncSetAttribute(
         cuda::bicos_kernel_smem<TDescriptor>,
         cudaFuncAttributeMaxDynamicSharedMemorySize,
         smem_size
-    ));
+    );
+
+    if (!smem_fits) {
+        state.SkipWithMessage("smem too small");
+        return;
+    }
 
     const dim3 block = cuda::max_blocksize(cuda::bicos_kernel_smem<TDescriptor>, smem_size);
     const dim3 grid = create_grid(block, size);
