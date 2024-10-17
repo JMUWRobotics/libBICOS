@@ -87,7 +87,7 @@ __global__ void bicos_kernel_smem(
     __syncthreads();
 
     int best_col1 = bicos_search<TDescriptor, load_deref>(
-        descr0->row(row)[col],
+        load_datacache(descr0->row(row) + col),
         row1,
         out.cols
     );
