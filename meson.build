@@ -55,7 +55,7 @@ libs = both_libraries(
 
 cxxopts = dependency('cxxopts', required: false, not_found_message: 'library cxxopts not found, skipping CLI build')
 if cxxopts.found()
-    executable(
+    cli_tgt = executable(
         'bicos-cli',
         sources: ['src/cli.cpp', 'src/fileutils.cpp'],
         include_directories: incls,
@@ -176,9 +176,10 @@ if impl == 'cuda'
         )
     )
 
-    if impl == 'cuda'
+    if impl == 'cuda' and cxxopts.found()
         test('regress_cuda',
             find_program('test/regress.bash'),
+            depends: cli_tgt,
             workdir: meson.current_source_dir()
         )
     endif
