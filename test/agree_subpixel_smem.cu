@@ -78,11 +78,14 @@ int main(void) {
 
     kernel = cuda::agree_subpixel_kernel_smem<INPUT_TYPE, double, cuda::NXCVariant::MINVAR>;
 
-    assertCudaSuccess(cudaFuncSetAttribute(
+    bool smem_fits = cudaSuccess == cudaFuncSetAttribute(
         kernel,
         cudaFuncAttributeMaxDynamicSharedMemorySize,
         smem_size
-    ));
+    );
+
+    if (!smem_fits)
+        return 77; // skip, see https://mesonbuild.com/Unit-tests.html#skipped-tests-and-hard-errors
 
     block = cuda::max_blocksize(kernel);
     grid = create_grid(block, randsize);

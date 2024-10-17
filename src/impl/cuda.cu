@@ -112,7 +112,7 @@ static void match_impl(
         cudaFuncAttributeMaxDynamicSharedMemorySize,
         smem_size
     );
-    cudaGetLastError(); // clear potential error from previous call to cudaFuncSetAttribute
+    // cudaGetLastError(); // clear potential error from previous call to cudaFuncSetAttribute
 
     if (bicos_smem_fits) {
         block = max_blocksize(bicos_kernel_smem<TDescriptor>, smem_size);
