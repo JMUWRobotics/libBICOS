@@ -83,4 +83,16 @@ public:
     }
 };
 
+template<typename T>
+__device__ __forceinline__
+T load_datacache(const T* p) {
+    return __ldg(p);
+}
+
+template<typename T>
+__device__ __forceinline__
+T load_deref(const T* p) {
+    return *p;
+}
+
 } // namespace BICOS::impl::cuda

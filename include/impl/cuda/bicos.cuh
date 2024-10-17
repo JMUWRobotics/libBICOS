@@ -38,8 +38,33 @@ static __device__ __forceinline__ int ham(uint128_t a, uint128_t b) {
     return lo + hi;
 }
 
+template<typename TDescriptor, TDescriptor (*FLoad)(const TDescriptor*)>
+static __device__ __forceinline__ int16_t
+bicos_search(TDescriptor d0, const TDescriptor* row1, size_t cols) {
+    int best_col1 = -1, min_cost = INT_MAX, num_duplicate_minima = 0;
+
+    for (size_t col1 = 0; col1 < cols; ++col1) {
+        const TDescriptor d1 = FLoad(row1 + col1);
+
+        int cost = ham(d0, d1);
+
+        if (cost < min_cost) {
+            min_cost = cost;
+            best_col1 = col1;
+            num_duplicate_minima = 0;
+        } else if (cost == min_cost) {
+            num_duplicate_minima++;
+        }
+    }
+
+    if (0 < num_duplicate_minima)
+        return -1;
+
+    return best_col1;
+}
+
 template<typename TDescriptor>
-__global__ void bicos_kernel(
+__global__ void bicos_kernel_smem(
     const StepBuf<TDescriptor>* descr0,
     const StepBuf<TDescriptor>* descr1,
     cv::cuda::PtrStepSz<int16_t> out
@@ -61,28 +86,36 @@ __global__ void bicos_kernel(
 
     __syncthreads();
 
-    const TDescriptor d0 = descr0->row(row)[col];
+    int best_col1 = bicos_search<TDescriptor, load_deref>(
+        descr0->row(row)[col],
+        row1,
+        out.cols
+    );
 
-    int best_col1 = -1, min_cost = INT_MAX, num_duplicate_minima = 0;
-
-    for (size_t col1 = 0; col1 < out.cols; ++col1) {
-        const TDescriptor d1 = row1[col1];
-
-        int cost = ham(d0, d1);
-
-        if (cost < min_cost) {
-            min_cost = cost;
-            best_col1 = col1;
-            num_duplicate_minima = 0;
-        } else if (cost == min_cost) {
-            num_duplicate_minima++;
-        }
-    }
-
-    if (0 < num_duplicate_minima)
-        return;
-
-    out(row, col) = abs(col - best_col1);
+    if (best_col1 != -1)
+        out(row, col) = abs(col - best_col1);
 }
 
-} // namespace BICOS::impl
+template<typename TDescriptor>
+__global__ void bicos_kernel(
+    const StepBuf<TDescriptor>* descr0,
+    const StepBuf<TDescriptor>* descr1,
+    cv::cuda::PtrStepSz<int16_t> out
+) {
+    const int col = blockIdx.x * blockDim.x + threadIdx.x;
+    const int row = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (out.cols <= col || out.rows <= row)
+        return;
+
+    int best_col1 = bicos_search<TDescriptor, load_datacache>(
+        load_datacache(descr0->row(row) + col),
+        descr1->row(row),
+        out.cols
+    );
+
+    if (best_col1 != -1)
+        out(row, col) = abs(col - best_col1);
+}
+
+} // namespace BICOS::impl::cuda
