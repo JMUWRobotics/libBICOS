@@ -222,19 +222,45 @@ void bench_bicos_kernel(benchmark::State& state) {
 
     cv::cuda::GpuMat out(size, cv::DataType<int16_t>::type);
 
+    const dim3 block = cuda::max_blocksize(cuda::bicos_kernel<TDescriptor>);
+    const dim3 grid = create_grid(block, size);
+
+    for (auto _: state) {
+        cuda::bicos_kernel<TDescriptor><<<grid, block>>>(lptr, rptr, out);
+        cudaDeviceSynchronize();
+    }
+
+    assertCudaSuccess(cudaGetLastError());
+}
+
+template<typename TDescriptor>
+void bench_bicos_kernel_smem(benchmark::State& state) {
+    cv::setRNGSeed(seed);
+
+    cpu::StepBuf<TDescriptor> ld(size), rd(size);
+
+    randomize_seeded(ld);
+    randomize_seeded(rd);
+
+    cuda::StepBuf<TDescriptor> ld_dev(ld), rd_dev(rd);
+
+    cuda::RegisteredPtr lptr(&ld_dev, 1, true), rptr(&rd_dev, 1, true);
+
+    cv::cuda::GpuMat out(size, cv::DataType<int16_t>::type);
+
     size_t smem_size = size.width * sizeof(TDescriptor);
 
     assertCudaSuccess(cudaFuncSetAttribute(
-        cuda::bicos_kernel<TDescriptor>,
+        cuda::bicos_kernel_smem<TDescriptor>,
         cudaFuncAttributeMaxDynamicSharedMemorySize,
         smem_size
     ));
 
-    const dim3 block = cuda::max_blocksize(cuda::bicos_kernel<TDescriptor>, smem_size);
+    const dim3 block = cuda::max_blocksize(cuda::bicos_kernel_smem<TDescriptor>, smem_size);
     const dim3 grid = create_grid(block, size);
 
     for (auto _: state) {
-        cuda::bicos_kernel<TDescriptor><<<grid, block, smem_size>>>(lptr, rptr, out);
+        cuda::bicos_kernel_smem<TDescriptor><<<grid, block, smem_size>>>(lptr, rptr, out);
         cudaDeviceSynchronize();
     }
 
@@ -329,9 +355,13 @@ BENCHMARK(bench_agree_subpixel_kernel<uint8_t>);
 BENCHMARK(bench_agree_subpixel_kernel<uint16_t>);
 BENCHMARK(bench_agree_subpixel_kernel_smem<uint8_t>);
 BENCHMARK(bench_agree_subpixel_kernel_smem<uint16_t>);
+
 BENCHMARK(bench_bicos_kernel<uint32_t>);
 BENCHMARK(bench_bicos_kernel<uint64_t>);
 BENCHMARK(bench_bicos_kernel<uint128_t>);
+BENCHMARK(bench_bicos_kernel_smem<uint32_t>);
+BENCHMARK(bench_bicos_kernel_smem<uint64_t>);
+BENCHMARK(bench_bicos_kernel_smem<uint128_t>);
 
 BENCHMARK(bench_descriptor_transform_kernel<uint8_t, uint32_t, TransformMode::LIMITED>);
 BENCHMARK(bench_descriptor_transform_kernel<uint16_t, uint32_t, TransformMode::LIMITED>);

@@ -107,18 +107,25 @@ static void match_impl(
     bicos_disp.setTo(INVALID_DISP_<int16_t>, _stream);
 
     size_t smem_size = sz.width * sizeof(TDescriptor);
-
-    assertCudaSuccess(cudaFuncSetAttribute(
-        bicos_kernel<TDescriptor>,
+    bool bicos_smem_fits = cudaSuccess == cudaFuncSetAttribute(
+        bicos_kernel_smem<TDescriptor>,
         cudaFuncAttributeMaxDynamicSharedMemorySize,
         smem_size
-    ));
+    );
 
-    block = max_blocksize(bicos_kernel<TDescriptor>, smem_size);
-    grid  = create_grid(block, sz);
+    if (bicos_smem_fits) {
+        block = max_blocksize(bicos_kernel_smem<TDescriptor>, smem_size);
+        grid  = create_grid(block, sz);
 
-    bicos_kernel<TDescriptor>
-        <<<grid, block, smem_size, mainstream>>>(descr0_dev, descr1_dev, bicos_disp);
+        bicos_kernel_smem<TDescriptor>
+            <<<grid, block, smem_size, mainstream>>>(descr0_dev, descr1_dev, bicos_disp);
+    } else {
+        block = max_blocksize(bicos_kernel<TDescriptor>);
+        grid = create_grid(block, sz);
+
+        bicos_kernel<TDescriptor>
+            <<<grid, block, 0, mainstream>>>(descr0_dev, descr1_dev, bicos_disp);
+    }
     assertCudaSuccess(cudaGetLastError());
 
     /* nxcorr */
