@@ -165,6 +165,17 @@ if impl == 'cuda'
         timeout: 150
     )
 
+    test('cutil',
+        executable('test_cutil',
+            sources: srcs + 'test/cutil.cu',
+            dependencies: deps,
+            include_directories: incls,
+            cuda_args: '-DBICOS_CUDA',
+            cpp_args: '-DBICOS_CPU',
+            override_options: ['cpp_std=c++20', 'cuda_std=c++20'],
+        )
+    )
+
     if impl == 'cuda'
         test('regress_cuda',
             find_program('test/regress.bash'),
