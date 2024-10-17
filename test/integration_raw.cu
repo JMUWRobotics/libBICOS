@@ -57,7 +57,7 @@ int main(int argc, char const* const* argv) {
 
     dim3 grid, block;
 
-    impl::cuda::StepBuf<uint128_t> lddev(sz), rddev(sz);
+    cuda::StepBuf<uint128_t> lddev(sz), rddev(sz);
 
     cuda::RegisteredPtr ldptr(&lddev), rdptr(&rddev);
 
@@ -70,12 +70,12 @@ int main(int argc, char const* const* argv) {
     cudaEventCreate(&ldescev);
     cudaEventCreate(&rdescev);
 
-    block = impl::cuda::max_blocksize(impl::cuda::transform_limited_kernel<uint8_t, uint128_t>);
+    block = cuda::max_blocksize(cuda::transform_limited_kernel<uint8_t, uint128_t>);
     grid = create_grid(block, sz);
 
-    impl::cuda::transform_limited_kernel<uint8_t, uint128_t>
+    cuda::transform_limited_kernel<uint8_t, uint128_t>
         <<<grid, block, 0, lstream>>>(dptr, n, sz, ldptr);
-    impl::cuda::transform_limited_kernel<uint8_t, uint128_t>
+    cuda::transform_limited_kernel<uint8_t, uint128_t>
         <<<grid, block, 0, rstream>>>(dptr + n, n, sz, rdptr);
 
     assertCudaSuccess(cudaGetLastError());
@@ -89,10 +89,12 @@ int main(int argc, char const* const* argv) {
     cv::cuda::GpuMat raw_gpu(sz, cv::DataType<int16_t>::type);
     raw_gpu.setTo(INVALID_DISP_<int16_t>);
 
-    block = impl::cuda::max_blocksize(impl::cuda::bicos_kernel<uint128_t>);
+    block = cuda::max_blocksize(impl::cuda::bicos_kernel<uint128_t>);
     grid = create_grid(block, sz);
 
-    impl::cuda::bicos_kernel<uint128_t>
+    // clang-format off
+
+    cuda::bicos_kernel<uint128_t>
         <<<grid, block, 0, mainstream>>>(ldptr, rdptr, raw_gpu);
 
     assertCudaSuccess(cudaGetLastError());
@@ -102,18 +104,12 @@ int main(int argc, char const* const* argv) {
     cv::merge(lhost, lhin);
     cv::merge(rhost, rhin);
 
-    auto ldhost = impl::cpu::descriptor_transform<uint8_t, uint128_t, impl::cpu::transform_limited>(
-             lhin,
-             sz,
-             n
-         ),
-         rdhost = impl::cpu::descriptor_transform<uint8_t, uint128_t, impl::cpu::transform_limited>(
-             rhin,
-             sz,
-             n
-         );
+    auto ldhost = cpu::descriptor_transform<uint8_t, uint128_t, impl::cpu::transform_limited>(lhin, sz, n),
+         rdhost = cpu::descriptor_transform<uint8_t, uint128_t, impl::cpu::transform_limited>(rhin, sz, n);
 
-    raw_host = impl::cpu::bicos(ldhost, rdhost, sz);
+    // clang-format on
+
+    raw_host = cpu::bicos(ldhost, rdhost, sz);
 
     cudaStreamSynchronize(mainstream);
 
