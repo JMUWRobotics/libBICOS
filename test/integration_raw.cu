@@ -89,19 +89,11 @@ int main(int argc, char const* const* argv) {
     cv::cuda::GpuMat raw_gpu(sz, cv::DataType<int16_t>::type);
     raw_gpu.setTo(INVALID_DISP_<int16_t>);
 
-    size_t smem_size = sz.width * sizeof(uint128_t);
-
-    assertCudaSuccess(cudaFuncSetAttribute(
-        impl::cuda::bicos_kernel<uint128_t>,
-        cudaFuncAttributeMaxDynamicSharedMemorySize,
-        smem_size
-    ));
-
     block = impl::cuda::max_blocksize(impl::cuda::bicos_kernel<uint128_t>);
     grid = create_grid(block, sz);
 
     impl::cuda::bicos_kernel<uint128_t>
-        <<<grid, block, smem_size, mainstream>>>(ldptr, rdptr, raw_gpu);
+        <<<grid, block, 0, mainstream>>>(ldptr, rdptr, raw_gpu);
 
     assertCudaSuccess(cudaGetLastError());
 
