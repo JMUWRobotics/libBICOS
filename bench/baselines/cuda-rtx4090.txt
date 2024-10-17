@@ -1,62 +1,73 @@
 ninja: Entering directory `/home/chris/Source/libBICOS/builddir'
 ninja: no work to do.
 1/1 cuda RUNNING       
->>> MESON_TEST_ITERATION=1 ASAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_summary=1 MSAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1 UBSAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1 /home/chris/Source/libBICOS/builddir/bench_cuda '--benchmark_context=available_gpus=NVIDIA GeForce RTX 4090'
+>>> MSAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1 MESON_TEST_ITERATION=1 UBSAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1 ASAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_summary=1 /home/chris/Source/libBICOS/builddir/bench_cuda '--benchmark_context=available_gpus=NVIDIA GeForce RTX 4090'
 ――――――――――――――――――――――――――――――――――――― ✀  ―――――――――――――――――――――――――――――――――――――
 --------------------------------------------------------------------------------------------------------------------------------
 Benchmark                                                                                      Time             CPU   Iterations
 --------------------------------------------------------------------------------------------------------------------------------
-bench_nxcorr_subroutine<float, cuda::nxcorrf>/repeats:10_mean                               5477 ns         5476 ns           10
-bench_nxcorr_subroutine<float, cuda::nxcorrf>/repeats:10_median                             5468 ns         5467 ns           10
-bench_nxcorr_subroutine<float, cuda::nxcorrf>/repeats:10_stddev                             32.9 ns         33.0 ns           10
-bench_nxcorr_subroutine<float, cuda::nxcorrf>/repeats:10_cv                                 0.60 %          0.60 %            10
-bench_nxcorr_subroutine<double, cuda::nxcorrd>/repeats:10_mean                              9570 ns         9569 ns           10
-bench_nxcorr_subroutine<double, cuda::nxcorrd>/repeats:10_median                            9567 ns         9566 ns           10
-bench_nxcorr_subroutine<double, cuda::nxcorrd>/repeats:10_stddev                            22.9 ns         22.9 ns           10
-bench_nxcorr_subroutine<double, cuda::nxcorrd>/repeats:10_cv                                0.24 %          0.24 %            10
-bench_agree_kernel<uint8_t>                                                              1651296 ns      1650803 ns          425
-bench_agree_kernel<uint16_t>                                                             1669275 ns      1669185 ns          420
-bench_agree_subpixel_kernel<uint8_t>                                                    15997154 ns     15995920 ns           44
-bench_agree_subpixel_kernel<uint16_t>                                                   16021007 ns     16020098 ns           44
-bench_agree_subpixel_kernel_smem<uint8_t>                                               16113320 ns     16109523 ns           43
-bench_agree_subpixel_kernel_smem<uint16_t>                                              17058756 ns     17057720 ns           41
-bench_bicos_kernel<uint32_t>                                                             9620288 ns      9618255 ns           72
-bench_bicos_kernel<uint64_t>                                                            11504139 ns     11501443 ns           61
-bench_bicos_kernel<uint128_t>                                                           19280414 ns     19279825 ns           37
-bench_descriptor_transform_kernel<uint8_t, uint32_t, TransformMode::LIMITED>              211393 ns       211338 ns        10000
-bench_descriptor_transform_kernel<uint16_t, uint32_t, TransformMode::LIMITED>             202762 ns       202690 ns        10000
-bench_descriptor_transform_kernel<uint8_t, uint64_t, TransformMode::LIMITED>              345518 ns       345418 ns        10000
-bench_descriptor_transform_kernel<uint16_t, uint64_t, TransformMode::LIMITED>             371576 ns       371508 ns        10000
-bench_descriptor_transform_kernel<uint8_t, uint128_t, TransformMode::LIMITED>            1061064 ns      1060934 ns        10000
-bench_descriptor_transform_kernel<uint16_t, uint128_t, TransformMode::LIMITED>           1076276 ns      1076008 ns        10000
-bench_descriptor_transform_kernel<uint8_t, uint32_t, TransformMode::FULL>                 204668 ns       204626 ns        10000
-bench_descriptor_transform_kernel<uint16_t, uint32_t, TransformMode::FULL>                214568 ns       214530 ns        10000
-bench_descriptor_transform_kernel<uint8_t, uint64_t, TransformMode::FULL>                 374808 ns       374726 ns        10000
-bench_descriptor_transform_kernel<uint16_t, uint64_t, TransformMode::FULL>                378685 ns       378603 ns        10000
-bench_descriptor_transform_kernel<uint8_t, uint128_t, TransformMode::FULL>               1159254 ns      1159064 ns        10000
-bench_descriptor_transform_kernel<uint16_t, uint128_t, TransformMode::FULL>              1169680 ns      1169518 ns        10000
-bench_integration/2/0                                                                   11138179 ns     11135397 ns           61
-bench_integration/8/0                                                                   12317933 ns     12317109 ns           55
-bench_integration/14/0                                                                  16381114 ns     16377268 ns           41
-bench_integration/20/0                                                                  27603449 ns     27600313 ns           25
-bench_integration/2/25                                                                  11130503 ns     11128594 ns           61
-bench_integration/8/25                                                                  20783496 ns     20773391 ns           33
-bench_integration/14/25                                                                 34571736 ns     34568792 ns           20
-bench_integration/20/25                                                                 51470560 ns     51466679 ns           14
-bench_integration/2/20                                                                  11162799 ns     11158442 ns           61
-bench_integration/8/20                                                                  22881621 ns     22877802 ns           29
-bench_integration/14/20                                                                 39768178 ns     39766027 ns           18
-bench_integration/20/20                                                                 57259521 ns     57254998 ns           12
-bench_integration/2/15                                                                  11118031 ns     11114637 ns           61
-bench_integration/8/15                                                                  26327185 ns     26320875 ns           26
-bench_integration/14/15                                                                 46007086 ns     46004481 ns           15
-bench_integration/20/15                                                                 66190073 ns     66175993 ns           11
-bench_integration/2/10                                                                  11141165 ns     11137619 ns           61
-bench_integration/8/10                                                                  32704259 ns     32697430 ns           21
-bench_integration/14/10                                                                 60019286 ns     60015835 ns           11
-bench_integration/20/10                                                                 83484176 ns     83465407 ns            8
+bench_nxcorr_subroutine<float, cuda::NXCVariant::MINVAR>/repeats:10_mean                    5597 ns         5597 ns           10
+bench_nxcorr_subroutine<float, cuda::NXCVariant::MINVAR>/repeats:10_median                  5477 ns         5477 ns           10
+bench_nxcorr_subroutine<float, cuda::NXCVariant::MINVAR>/repeats:10_stddev                   224 ns          224 ns           10
+bench_nxcorr_subroutine<float, cuda::NXCVariant::MINVAR>/repeats:10_cv                      4.00 %          4.00 %            10
+bench_nxcorr_subroutine<float, cuda::NXCVariant::PLAIN>/repeats:10_mean                     5512 ns         5512 ns           10
+bench_nxcorr_subroutine<float, cuda::NXCVariant::PLAIN>/repeats:10_median                   5431 ns         5430 ns           10
+bench_nxcorr_subroutine<float, cuda::NXCVariant::PLAIN>/repeats:10_stddev                    197 ns          197 ns           10
+bench_nxcorr_subroutine<float, cuda::NXCVariant::PLAIN>/repeats:10_cv                       3.57 %          3.57 %            10
+bench_nxcorr_subroutine<double, cuda::NXCVariant::MINVAR>/repeats:10_mean                   9705 ns         9705 ns           10
+bench_nxcorr_subroutine<double, cuda::NXCVariant::MINVAR>/repeats:10_median                 9592 ns         9591 ns           10
+bench_nxcorr_subroutine<double, cuda::NXCVariant::MINVAR>/repeats:10_stddev                  287 ns          287 ns           10
+bench_nxcorr_subroutine<double, cuda::NXCVariant::MINVAR>/repeats:10_cv                     2.96 %          2.96 %            10
+bench_nxcorr_subroutine<double, cuda::NXCVariant::PLAIN>/repeats:10_mean                    9644 ns         9644 ns           10
+bench_nxcorr_subroutine<double, cuda::NXCVariant::PLAIN>/repeats:10_median                  9520 ns         9520 ns           10
+bench_nxcorr_subroutine<double, cuda::NXCVariant::PLAIN>/repeats:10_stddev                   288 ns          288 ns           10
+bench_nxcorr_subroutine<double, cuda::NXCVariant::PLAIN>/repeats:10_cv                      2.99 %          2.99 %            10
+bench_agree_kernel<uint8_t>                                                              1741806 ns      1741743 ns          403
+bench_agree_kernel<uint16_t>                                                             1746969 ns      1746912 ns          397
+bench_agree_subpixel_kernel<uint8_t>                                                    17407999 ns     17402037 ns           43
+bench_agree_subpixel_kernel<uint16_t>                                                   17379780 ns     17379072 ns           43
+bench_agree_subpixel_kernel_smem<uint8_t>                                               17653492 ns     17652785 ns           43
+bench_agree_subpixel_kernel_smem<uint16_t>                                              18713784 ns     18707130 ns           40
+bench_bicos_kernel<uint32_t>                                                            10997409 ns     10993182 ns           62
+bench_bicos_kernel<uint64_t>                                                            13663866 ns     13662776 ns           53
+bench_bicos_kernel<uint128_t>                                                           22476291 ns     22475476 ns           33
+bench_bicos_kernel_smem<uint32_t>                                                        9992775 ns      9992471 ns           69
+bench_bicos_kernel_smem<uint64_t>                                                       12002308 ns     12001889 ns           59
+bench_bicos_kernel_smem<uint128_t>                                                      20280825 ns     20279960 ns           36
+bench_descriptor_transform_kernel<uint8_t, uint32_t, TransformMode::LIMITED>              213841 ns       213804 ns        10000
+bench_descriptor_transform_kernel<uint16_t, uint32_t, TransformMode::LIMITED>             206557 ns       206495 ns        10000
+bench_descriptor_transform_kernel<uint8_t, uint64_t, TransformMode::LIMITED>              349988 ns       349880 ns        10000
+bench_descriptor_transform_kernel<uint16_t, uint64_t, TransformMode::LIMITED>             378032 ns       377936 ns        10000
+bench_descriptor_transform_kernel<uint8_t, uint128_t, TransformMode::LIMITED>            1044714 ns      1044518 ns        10000
+bench_descriptor_transform_kernel<uint16_t, uint128_t, TransformMode::LIMITED>           1100897 ns      1100691 ns        10000
+bench_descriptor_transform_kernel<uint8_t, uint32_t, TransformMode::FULL>                 209763 ns       209726 ns        10000
+bench_descriptor_transform_kernel<uint16_t, uint32_t, TransformMode::FULL>                218521 ns       218485 ns        10000
+bench_descriptor_transform_kernel<uint8_t, uint64_t, TransformMode::FULL>                 379044 ns       378976 ns        10000
+bench_descriptor_transform_kernel<uint16_t, uint64_t, TransformMode::FULL>                382820 ns       382749 ns        10000
+bench_descriptor_transform_kernel<uint8_t, uint128_t, TransformMode::FULL>               1159135 ns      1158923 ns        10000
+bench_descriptor_transform_kernel<uint16_t, uint128_t, TransformMode::FULL>              1183802 ns      1183580 ns        10000
+bench_integration/2/0                                                                   11198031 ns     11194506 ns           56
+bench_integration/8/0                                                                   12654883 ns     12654274 ns           53
+bench_integration/14/0                                                                  16263844 ns     16263166 ns           42
+bench_integration/20/0                                                                  27441139 ns     27436316 ns           25
+bench_integration/2/25                                                                  11155939 ns     11155502 ns           62
+bench_integration/8/25                                                                  20573094 ns     20572343 ns           33
+bench_integration/14/25                                                                 33834818 ns     33832526 ns           21
+bench_integration/20/25                                                                 50652858 ns     50649510 ns           10
+bench_integration/2/20                                                                  11165548 ns     11161557 ns           61
+bench_integration/8/20                                                                  22428384 ns     22419795 ns           31
+bench_integration/14/20                                                                 37959158 ns     37957770 ns           18
+bench_integration/20/20                                                                 55891675 ns     55888135 ns           12
+bench_integration/2/15                                                                  11199982 ns     11195497 ns           61
+bench_integration/8/15                                                                  25695406 ns     25692894 ns           27
+bench_integration/14/15                                                                 44141538 ns     44124535 ns           16
+bench_integration/20/15                                                                 63821949 ns     63817699 ns           11
+bench_integration/2/10                                                                  11073238 ns     11071678 ns           61
+bench_integration/8/10                                                                  31813606 ns     31801936 ns           22
+bench_integration/14/10                                                                 56952120 ns     56948468 ns           12
+bench_integration/20/10                                                                 80605539 ns     80600077 ns            9
 ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-1/1 cuda OK             313.76s
+1/1 cuda OK             261.26s
 
 
 Ok:                 1   
