@@ -89,7 +89,7 @@ int main(int argc, char const* const* argv) {
     cv::cuda::GpuMat raw_gpu(sz, cv::DataType<int16_t>::type);
     raw_gpu.setTo(INVALID_DISP_<int16_t>);
 
-    block = cuda::max_blocksize(impl::cuda::bicos_kernel<uint128_t>);
+    block = cuda::max_blocksize(cuda::bicos_kernel<uint128_t>);
     grid = create_grid(block, sz);
 
     // clang-format off
