@@ -34,7 +34,7 @@ template<typename T, typename V>
 using corrfun = V (*)(const T*, const T*, size_t, V);
 
 template<NXCVariant VARIANT, typename T>
-__device__ __forceinline__ double nxcorrd(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] double minvar) {
+__device__ __forceinline__ double nxcorrd(const T* __restrict__ pix0, const T* __restrict__ pix1, size_t n, [[maybe_unused]] double minvar) {
     double mean0 = 0.0, mean1 = 0.0;
     for (size_t i = 0; i < n; ++i) {
         mean0 = __dadd_rn(mean0, pix0[i]);
@@ -61,7 +61,7 @@ __device__ __forceinline__ double nxcorrd(const T* pix0, const T* pix1, size_t n
 }
 
 template<NXCVariant VARIANT, typename T>
-__device__ __forceinline__ float nxcorrf(const T* pix0, const T* pix1, size_t n, [[maybe_unused]] float minvar) {
+__device__ __forceinline__ float nxcorrf(const T* __restrict__ pix0, const T* __restrict__ pix1, size_t n, [[maybe_unused]] float minvar) {
     float mean0 = 0.0f, mean1 = 0.0f;
     for (size_t i = 0; i < n; ++i) {
         mean0 = __fadd_rn(mean0, pix0[i]);
@@ -114,7 +114,7 @@ __global__ void agree_kernel(
     if (out.cols <= col || out.rows <= row)
         return;
 
-    const int16_t d = raw_disp(row, col);
+    const int16_t d = __ldg(raw_disp.ptr(row) + col);
 
     if (d == INVALID_DISP_<int16_t>)
         return;
@@ -131,8 +131,8 @@ __global__ void agree_kernel(
         *stack1 = stacks + n;
 
     for (size_t t = 0; t < n; ++t) {
-        pix0[t] = stack0[t](row, col);
-        pix1[t] = stack1[t](row, col1);
+        pix0[t] = __ldg(stack0[t].ptr(row) + col);
+        pix1[t] = __ldg(stack1[t].ptr(row) + col1);
 #ifdef BICOS_DEBUG
         if (t >= 33)
             __trap();
@@ -167,7 +167,7 @@ __global__ void agree_subpixel_kernel(
     if (out.cols <= col || out.rows <= row)
         return;
 
-    const int16_t d = raw_disp(row, col);
+    const int16_t d = __ldg(raw_disp.ptr(row) + col);
 
     if (d == INVALID_DISP_<int16_t>)
         return;
@@ -184,8 +184,8 @@ __global__ void agree_subpixel_kernel(
         *stack1 = stacks + n;
 
     for (size_t t = 0; t < n; ++t) {
-        pix0[t] = stack0[t](row, col);
-        pix1[t] = stack1[t](row, col1);
+        pix0[t] = __ldg(stack0[t].ptr(row) + col);
+        pix1[t] = __ldg(stack1[t].ptr(row) + col1);
 #ifdef BICOS_DEBUG
         if (t >= PIX_STACKSIZE)
             __trap();
@@ -211,9 +211,9 @@ __global__ void agree_subpixel_kernel(
         // clang-format off
 
         for (size_t t = 0; t < n; ++t) {
-            TInput y0 = stack1[t](row, col1 - 1),
+            TInput y0 = __ldg(stack1[t].ptr(row) + col1 - 1),
                    y1 = pix1[t],
-                   y2 = stack1[t](row, col1 + 1);
+                   y2 = __ldg(stack1[t].ptr(row) + col1 + 1);
 
             a[t] = 0.5f * ( y0 - 2.0f * y1 + y2);
             b[t] = 0.5f * (-y0             + y2);
@@ -290,7 +290,7 @@ __global__ void agree_subpixel_kernel_smem(
 
     TInput pix0[PIX_STACKSIZE];
     for (size_t t = 0; t < n; ++t) {
-        pix0[t] = stack0[t](row, col);
+        pix0[t] = __ldg(stack0[t].ptr(row) + col);
 #ifdef BICOS_DEBUG
         if (t >= PIX_STACKSIZE)
             __trap();

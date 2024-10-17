@@ -43,7 +43,7 @@ __global__ void transform_full_kernel(
 
     float av = 0.0f;
     for (ssize_t i = 0; i < n; ++i) {
-        av += pix[i] = stacks[i](row, col);
+        av += pix[i] = __ldg(stacks[i].ptr(row) + col);
 #ifdef BICOS_DEBUG
         if (i >= sizeof(pix))
             __trap();
@@ -108,7 +108,7 @@ __global__ void transform_limited_kernel(
 
     float av = 0.0f;
     for (size_t i = 0; i < n; ++i) {
-        av += pix[i] = stacks[i](row, col);
+        av += pix[i] = __ldg(stacks[i].ptr(row) + col);
 #ifdef BICOS_DEBUG
         if (i >= sizeof(pix))
             __trap();
