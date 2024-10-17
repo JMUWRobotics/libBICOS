@@ -18,6 +18,8 @@
 
 #include "impl/cuda/cutil.cuh"
 
+#include <iostream>
+
 using namespace BICOS;
 using namespace impl;
 

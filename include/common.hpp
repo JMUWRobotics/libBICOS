@@ -61,4 +61,12 @@ struct Config {
 #endif
 };
 
+class Exception: public std::exception {
+    std::string _message;
+
+public:
+    Exception(const std::string& message);
+    const char * what() const throw() override;
+};
+
 } // namespace BICOS

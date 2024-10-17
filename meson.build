@@ -57,7 +57,7 @@ cxxopts = dependency('cxxopts', required: false, not_found_message: 'library cxx
 if cxxopts.found()
     cli_tgt = executable(
         'bicos-cli',
-        sources: ['src/cli.cpp', 'src/fileutils.cpp'],
+        sources: ['src/cli.cpp', 'src/fileutils.cpp', 'src/exception.cpp'],
         include_directories: incls,
         dependencies: deps + cxxopts,
         link_with: libs,
@@ -68,7 +68,7 @@ endif
 
 if impl == 'cuda'
     datdir = join_paths(meson.project_source_root(), 'data')
-    srcs = files('src/impl/cuda.cu', 'src/impl/cpu.cpp', 'src/fileutils.cpp')
+    srcs = files('src/impl/cuda.cu', 'src/impl/cpu.cpp', 'src/fileutils.cpp', 'src/exception.cpp')
     incls = [incls, include_directories('test/include')]
 
     foreach input_depth : [8, 16]

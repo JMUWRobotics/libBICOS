@@ -18,9 +18,11 @@
 
 #pragma once
 
-#include <iostream>
 #include <opencv2/core.hpp>
 #include <opencv2/core/cuda/common.hpp>
+#include <sstream>
+
+#include "common.hpp"
 
 #define PIX_STACKSIZE 33
 
@@ -30,9 +32,10 @@ namespace BICOS::impl::cuda {
     do { \
         cudaError_t err = (call); \
         if (cudaSuccess != err) { \
-            std::cerr << "libBICOS CUDA error in " << __FILE__ << " [ " << __PRETTY_FUNCTION__ \
-                      << " | L" << __LINE__ << " ]: " << cudaGetErrorString(err) << std::endl; \
-            abort(); \
+            std::stringstream msg("libBICOS CUDA error in "); \
+            msg << __FILE__ << " [ " << __PRETTY_FUNCTION__ << " | line " << __LINE__ \
+                << " ]: " << cudaGetErrorString(err); \
+            throw BICOS::Exception(msg.str()); \
         } \
     } while (0)
 
@@ -42,7 +45,7 @@ namespace BICOS::impl::cuda {
         cv::cuda::device::divUp(size.height, block.y) \
     )
 
-template<class T> 
+template<class T>
 inline dim3 max_blocksize(T fun, size_t smem_size = 0) {
     int _minGridSize, blockSize;
     assertCudaSuccess(cudaOccupancyMaxPotentialBlockSize(&_minGridSize, &blockSize, fun, smem_size));
@@ -62,7 +65,7 @@ public:
         assertCudaSuccess(cudaHostGetDevicePointer(&_pdev, _phost, 0));
     }
     ~RegisteredPtr() {
-        assertCudaSuccess(cudaHostUnregister(_phost));
+        cudaHostUnregister(_phost);
     }
 
     RegisteredPtr(const RegisteredPtr&) = delete;
@@ -84,21 +87,18 @@ public:
 };
 
 template<typename T>
-__device__ __forceinline__
-T load_datacache(const T* p) {
+__device__ __forceinline__ T load_datacache(const T* p) {
     return __ldg(p);
 }
 
 template<>
-__device__ __forceinline__
-__uint128_t load_datacache<__uint128_t>(const __uint128_t* _p) {
-    auto p = reinterpret_cast<const uint64_t *>(_p);
+__device__ __forceinline__ __uint128_t load_datacache<__uint128_t>(const __uint128_t* _p) {
+    auto p = reinterpret_cast<const uint64_t*>(_p);
     return (__uint128_t(__ldg(p + 1)) << 64) | __uint128_t(__ldg(p));
 }
 
 template<typename T>
-__device__ __forceinline__
-T load_deref(const T* p) {
+__device__ __forceinline__ T load_deref(const T* p) {
     return *p;
 }
 
