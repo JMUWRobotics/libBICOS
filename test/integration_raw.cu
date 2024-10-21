@@ -53,7 +53,7 @@ int main(int argc, char const* const* argv) {
 
     cv::Mat_<int16_t> raw_gpu_host, raw_host;
 
-    cuda::RegisteredPtr dptr(dev.data(), 2 * n, true);
+    const cuda::RegisteredPtr dptr(dev.data(), 2 * n, true);
 
     dim3 grid, block;
 

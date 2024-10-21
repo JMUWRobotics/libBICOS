@@ -39,7 +39,7 @@ int main(void) {
     auto ld_dev = std::make_unique<cuda::StepBuf<DESCRIPTOR_TYPE>>(*ld),
          rd_dev = std::make_unique<cuda::StepBuf<DESCRIPTOR_TYPE>>(*rd);
 
-    cuda::RegisteredPtr lptr(ld_dev.get(), 1, true), rptr(rd_dev.get(), 1, true);
+    const cuda::RegisteredPtr lptr(ld_dev.get(), 1, true), rptr(rd_dev.get(), 1, true);
 
     cv::cuda::GpuMat disp_dev(randsize, cv::DataType<int16_t>::type);
     disp_dev.setTo(INVALID_DISP_<int16_t>);

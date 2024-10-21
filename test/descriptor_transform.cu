@@ -60,7 +60,7 @@ int main(void) {
         rand_dev.push_back(randmat_dev);
     }
 
-    cuda::RegisteredPtr rand_devptr(rand_dev.data(), n, true);
+    const cuda::RegisteredPtr rand_devptr(rand_dev.data(), n, true);
 
     cuda::StepBuf<DESCRIPTOR_TYPE> gpuout(randsize);
     cuda::RegisteredPtr gpuout_devptr(&gpuout);

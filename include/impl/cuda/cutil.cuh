@@ -85,7 +85,7 @@ public:
     operator T*() {
         return _pdev;
     }
-    operator const T*() {
+    operator const T*() const {
         return _pdev;
     }
 
