@@ -59,7 +59,18 @@ private:
 
 public:
     RegisteredPtr(T* phost, size_t n = 1, bool read_only = false): _phost(phost) {
-        unsigned int flags = read_only ? cudaHostRegisterReadOnly : 0;
+        int read_only_supported;
+        unsigned int flags = cudaHostRegisterMapped;
+
+        if (read_only) {
+            cudaDeviceGetAttribute(
+                &read_only_supported,
+                cudaDevAttrHostRegisterReadOnlySupported,
+                0
+            );
+            if (read_only_supported)
+                flags |= cudaHostRegisterReadOnly;
+        }
 
         assertCudaSuccess(cudaHostRegister(_phost, sizeof(T) * n, flags));
         assertCudaSuccess(cudaHostGetDevicePointer(&_pdev, _phost, 0));
