@@ -20,7 +20,7 @@ project('libBICOS', 'cpp', version: '1.1.0-devel', license: 'LGPL-3.0-or-later',
 pkg = import('pkgconfig')
 
 impl = get_option('implementation')
-srcs = files('src/lib.cpp')
+srcs = files('src/lib.cpp', 'src/exception.cpp')
 incls = include_directories('include')
 deps = [dependency('opencv4')]
 
