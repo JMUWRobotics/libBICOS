@@ -2,6 +2,10 @@
 
 BInary COrrespondence Search for multi-shot stereo imaging, with optional CUDA acceleration.
 
+## Citing:
+
+This is the implementation of the corresponding paper to appear in [Optical 3D Metrology](https://o3dm.fbk.eu). *BibTeX will appear here when available.*
+
 ## Build:
 
 Dependencies:
