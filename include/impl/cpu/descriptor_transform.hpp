@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include "common.hpp"
 #include "impl/common.hpp"
 #include "bitfield.hpp"
 #include "stepbuf.hpp"
@@ -83,7 +82,7 @@ inline TDescirptor transform_full(const TInput* pix, size_t _n) {
         av += pix[t];
     av /= n;
 
-    wider_t<TInput> *pairsums = STACKALLOC(n - 1, wider_t<TInput>);
+    thread_local std::vector<wider_t<TInput>> pairsums; pairsums.clear(); pairsums.reserve(n - 1);
 
     // clang-format off
 
@@ -96,10 +95,10 @@ inline TDescirptor transform_full(const TInput* pix, size_t _n) {
         bf.set(a < c);
         bf.set(a < av);
 
-        pairsums[t] = wider_t<TInput>(pix[t]) + wider_t<TInput>(pix[t + 1]);
+        pairsums.push_back(wider_t<TInput>(pix[t]) + wider_t<TInput>(pix[t + 1]));
     }
 
-    pairsums[n - 2] = wider_t<TInput>(pix[n - 2]) + wider_t<TInput>(pix[n - 1]);
+    pairsums.push_back(wider_t<TInput>(pix[n - 2]) + wider_t<TInput>(pix[n - 1]));
 
     const TInput a = pix[n - 2],
                  b = pix[n - 1];

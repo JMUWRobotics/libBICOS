@@ -20,7 +20,6 @@
 
 #include "common.hpp"
 #include "compat.hpp"
-#include "impl/common.hpp"
 
 namespace BICOS::impl::cpu {
 
@@ -142,17 +141,16 @@ static void agree_subpixel(
                 } else {
                     // clang-format off
 
-                    TInput *interp = STACKALLOC(n, TInput);
-                    float *a = STACKALLOC(n, float), *b = STACKALLOC(n, float), *c = STACKALLOC(n, float);
+                    thread_local std::vector<float> a, b; a.clear(); b.clear(); a.reserve(n); b.reserve(n);
 
                     const TInput *y0 = stack1.ptr<TInput>(row, col1 - 1),
                                  *y1 = stack1.ptr<TInput>(row, col1    ),
                                  *y2 = stack1.ptr<TInput>(row, col1 + 1);
                     
                     for (size_t t = 0; t < n; ++t) {
-                        a[t] = 0.5f * ( y0[t] - 2.0f * y1[t] + y2[t]);
-                        b[t] = 0.5f * (-y0[t]                + y2[t]);
-                        c[t] = y1[t];
+                        a.push_back(0.5f * ( y0[t] - 2.0f * y1[t] + y2[t]));
+                        b.push_back(0.5f * (-y0[t]                + y2[t]));
+                        // c[t] = y1[t];
                     }
 
                     // clang-format on
@@ -160,10 +158,11 @@ static void agree_subpixel(
                     float best_x = 0.f, best_nxc = -1.f;
 
                     for (float x = -1.f; x <= 1.f; x += subpixel_step) {
+                        thread_local std::vector<TInput> interp; interp.clear(); interp.reserve(n);
                         for (size_t t = 0; t < n; ++t)
-                            interp[t] = (TInput)roundevenf(a[t] * x * x + b[t] * x + c[t]);
+                            interp.push_back((TInput)roundevenf(a[t] * x * x + b[t] * x + y1[t]));
 
-                        float nxc = nxcorr(stack0.ptr<TInput>(row, col), interp, n, min_var);
+                        float nxc = nxcorr(stack0.ptr<TInput>(row, col), interp.data(), n, min_var);
 
                         if (best_nxc < nxc) {
                             best_x = x;
