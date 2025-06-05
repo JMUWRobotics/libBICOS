@@ -268,6 +268,15 @@ if googlebench.found()
             ),
             args: [f'--benchmark_context=available_gpus=@available_gpus@']
         )
+
+        benchmark('cpu',
+            executable('bench_cpu',
+                sources: srcs + 'bench/cpu.cpp',
+                dependencies: deps,
+                include_directories: incls,
+                override_options: override_options
+            ),
+        )
     endif
 endif
 

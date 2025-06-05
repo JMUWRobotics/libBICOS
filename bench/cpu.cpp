@@ -16,4 +16,41 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// todo :)
+#include "impl/cpu/bicos.hpp"
+
+#include <benchmark/benchmark.h>
+
+using namespace BICOS;
+using namespace impl;
+using namespace cpu;
+
+template<typename TDescriptor, int FLAGS>
+static void bench_bicos_search(benchmark::State &state) {
+
+    std::vector<TDescriptor> data(1025);
+    std::generate(data.begin(), data.end(), [](){
+        TDescriptor v;
+        arc4random_buf(&v, sizeof(TDescriptor));
+        return v;
+    });
+
+    for (auto _ : state) {
+        int ret = bicos_search<TDescriptor, FLAGS>(data[0], data.data() + 1, data.size() - 1);
+        benchmark::DoNotOptimize(ret);
+    }
+}
+
+BENCHMARK(bench_bicos_search<uint32_t, 0>);
+BENCHMARK(bench_bicos_search<uint32_t, BICOSFLAGS_NODUPES>);
+BENCHMARK(bench_bicos_search<uint32_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
+BENCHMARK(bench_bicos_search<uint64_t, 0>);
+BENCHMARK(bench_bicos_search<uint64_t, BICOSFLAGS_NODUPES>);
+BENCHMARK(bench_bicos_search<uint64_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
+BENCHMARK(bench_bicos_search<uint128_t, 0>);
+BENCHMARK(bench_bicos_search<uint128_t, BICOSFLAGS_NODUPES>);
+BENCHMARK(bench_bicos_search<uint128_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
+BENCHMARK(bench_bicos_search<std::bitset<256>, 0>);
+BENCHMARK(bench_bicos_search<std::bitset<256>, BICOSFLAGS_NODUPES>);
+BENCHMARK(bench_bicos_search<std::bitset<256>, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
+
+BENCHMARK_MAIN();
