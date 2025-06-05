@@ -1,0 +1,15 @@
+----------------------------------------------------------------------------------------------------------------------------
+Benchmark                                                                                  Time             CPU   Iterations
+----------------------------------------------------------------------------------------------------------------------------
+bench_bicos_search<uint32_t, 0>                                                          443 ns          442 ns      1590295
+bench_bicos_search<uint32_t, BICOSFLAGS_NODUPES>                                         358 ns          357 ns      2191154
+bench_bicos_search<uint32_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>                352 ns          351 ns      2252084
+bench_bicos_search<uint64_t, 0>                                                          436 ns          436 ns      1602034
+bench_bicos_search<uint64_t, BICOSFLAGS_NODUPES>                                         309 ns          309 ns      2200160
+bench_bicos_search<uint64_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>                351 ns          351 ns      1966780
+bench_bicos_search<uint128_t, 0>                                                         548 ns          548 ns      1274092
+bench_bicos_search<uint128_t, BICOSFLAGS_NODUPES>                                        563 ns          562 ns      1270418
+bench_bicos_search<uint128_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>               562 ns          561 ns      1270694
+bench_bicos_search<std::bitset<256>, 0>                                                  709 ns          708 ns       977683
+bench_bicos_search<std::bitset<256>, BICOSFLAGS_NODUPES>                                 982 ns          981 ns       718811
+bench_bicos_search<std::bitset<256>, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>        996 ns          995 ns       726094

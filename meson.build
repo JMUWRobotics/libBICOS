@@ -37,6 +37,11 @@ if is_debug
     add_project_arguments('-DBICOS_DEBUG', language: ['cpp', 'cuda'])
 endif
 
+if get_option('portable').disabled()
+    add_project_arguments('-march=native', language: 'cpp')
+    message('Building with CPU-native optimizations. This makes the library non-portable!')
+endif
+
 # complaints about opencv inlines
 add_project_arguments('-Wno-deprecated-enum-enum-conversion', language: 'cpp')
 add_project_arguments(
@@ -274,7 +279,7 @@ if googlebench.found()
                 sources: srcs + 'bench/cpu.cpp',
                 dependencies: deps,
                 include_directories: incls,
-                override_options: override_options
+                override_options: override_options + ['debug=true'] # with symbols for decompilation
             ),
         )
     endif
