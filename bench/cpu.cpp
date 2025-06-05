@@ -27,7 +27,10 @@ using namespace cpu;
 template<typename TDescriptor, int FLAGS>
 static void bench_bicos_search(benchmark::State &state) {
 
-    std::vector<TDescriptor> data(1025);
+    int size = 1025;
+    benchmark::DoNotOptimize(size);
+
+    std::vector<TDescriptor> data(size);
     std::generate(data.begin(), data.end(), [](){
         TDescriptor v;
         arc4random_buf(&v, sizeof(TDescriptor));
