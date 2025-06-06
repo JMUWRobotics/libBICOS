@@ -83,7 +83,6 @@ static void bench_nxcorr(benchmark::State &state) {
 BENCHMARK(bench_bicos_search<uint32_t, 0>);
 BENCHMARK(bench_bicos_search<uint32_t, BICOSFLAGS_NODUPES>);
 BENCHMARK(bench_bicos_search<uint32_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
-
 BENCHMARK(bench_bicos_search_vanilla<uint32_t, 0>);
 BENCHMARK(bench_bicos_search_vanilla<uint32_t, BICOSFLAGS_NODUPES>);
 BENCHMARK(bench_bicos_search_vanilla<uint32_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
@@ -91,6 +90,10 @@ BENCHMARK(bench_bicos_search_vanilla<uint32_t, BICOSFLAGS_NODUPES | BICOSFLAGS_C
 BENCHMARK(bench_bicos_search<uint64_t, 0>);
 BENCHMARK(bench_bicos_search<uint64_t, BICOSFLAGS_NODUPES>);
 BENCHMARK(bench_bicos_search<uint64_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
+BENCHMARK(bench_bicos_search_vanilla<uint64_t, 0>);
+BENCHMARK(bench_bicos_search_vanilla<uint64_t, BICOSFLAGS_NODUPES>);
+BENCHMARK(bench_bicos_search_vanilla<uint64_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
+
 BENCHMARK(bench_bicos_search<uint128_t, 0>);
 BENCHMARK(bench_bicos_search<uint128_t, BICOSFLAGS_NODUPES>);
 BENCHMARK(bench_bicos_search<uint128_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
