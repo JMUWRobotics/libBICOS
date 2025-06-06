@@ -130,6 +130,12 @@
             "type": "cuda-gdb",
             "request": "launch",
             "program": "${workspaceFolder}/builddir/test_cutil"
+        },
+        {
+            "name": "test-simd",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/builddir/test_simd"
         }
     ]
 }

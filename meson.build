@@ -124,6 +124,15 @@ cli_tgt = executable(
     override_options: override_options,
 )
 
+test('simd',
+    executable('test_simd',
+        sources: 'test/simd.cpp',
+        dependencies: deps,
+        include_directories: incls,
+        override_options: override_options
+    )
+)
+
 if impl == 'cuda'
     datdir = join_paths(meson.project_source_root(), 'data')
     srcs = cudasrcs + files('src/impl/cpu.cpp', 'src/fileutils.cpp', 'src/exception.cpp', 'src/formatable.cpp')

@@ -17,6 +17,7 @@
  */
 
 #include "impl/cpu/bicos.hpp"
+#include "impl/cpu/agree.hpp"
 
 #include <benchmark/benchmark.h>
 
@@ -38,14 +39,55 @@ static void bench_bicos_search(benchmark::State &state) {
     });
 
     for (auto _ : state) {
-        int ret = bicos_search<TDescriptor, FLAGS>(data[0], data.data() + 1, data.size() - 1);
+        int ret = BicosSearch<TDescriptor>::template invoke<FLAGS>(data[0], data.data() + 1, data.size() - 1);
         benchmark::DoNotOptimize(ret);
     }
+}
+
+template<typename TDescriptor, int FLAGS>
+static void bench_bicos_search_vanilla(benchmark::State &state) {
+
+    int size = 1025;
+    benchmark::DoNotOptimize(size);
+
+    std::vector<TDescriptor> data(size);
+    std::generate(data.begin(), data.end(), [](){
+        TDescriptor v;
+        arc4random_buf(&v, sizeof(TDescriptor));
+        return v;
+    });
+
+    for (auto _ : state) {
+        int ret = bicos_search_<TDescriptor, FLAGS>(data[0], data.data() + 1, data.size() - 1);
+        benchmark::DoNotOptimize(ret);
+    }
+}
+
+static void bench_nxcorr(benchmark::State &state) {
+    
+    int size = 25;
+    benchmark::DoNotOptimize(size);
+
+    std::vector<uint8_t> a(2 * size);
+    std::generate(a.begin(), a.end(), [](){
+        return (uint8_t)arc4random();
+    });
+
+    for (auto _ : state) {
+        int ret = nxcorr(a.data(), a.data() + size, size, std::nullopt);
+        benchmark::DoNotOptimize(ret);
+    }
+
 }
 
 BENCHMARK(bench_bicos_search<uint32_t, 0>);
 BENCHMARK(bench_bicos_search<uint32_t, BICOSFLAGS_NODUPES>);
 BENCHMARK(bench_bicos_search<uint32_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
+
+BENCHMARK(bench_bicos_search_vanilla<uint32_t, 0>);
+BENCHMARK(bench_bicos_search_vanilla<uint32_t, BICOSFLAGS_NODUPES>);
+BENCHMARK(bench_bicos_search_vanilla<uint32_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
+
 BENCHMARK(bench_bicos_search<uint64_t, 0>);
 BENCHMARK(bench_bicos_search<uint64_t, BICOSFLAGS_NODUPES>);
 BENCHMARK(bench_bicos_search<uint64_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
@@ -55,5 +97,7 @@ BENCHMARK(bench_bicos_search<uint128_t, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTE
 BENCHMARK(bench_bicos_search<std::bitset<256>, 0>);
 BENCHMARK(bench_bicos_search<std::bitset<256>, BICOSFLAGS_NODUPES>);
 BENCHMARK(bench_bicos_search<std::bitset<256>, BICOSFLAGS_NODUPES | BICOSFLAGS_CONSISTENCY>);
+
+BENCHMARK(bench_nxcorr);
 
 BENCHMARK_MAIN();
